@@ -1,0 +1,57 @@
+<!--
+  MyPlugin — MOD pedalboard icon template.
+
+  Mustache tokens ({{brand}}, {{label}}, {{color}}) are substituted by
+  MOD-UI at render time using the values from modgui.ttl. MOD-UI also
+  binds knobs / switches / displays via the `mod-role` attribute (e.g.
+  mod-role="input-control-port" mod-port-symbol="gain") — the LV2 port
+  symbol must match an `lv2:symbol` declared in modgui.ttl AND in the
+  plugin's generated TTL (which comes from initParameter()).
+
+  Required structural elements (MOD-UI complains visually if missing):
+    - <div mod-role="drag-handle">  whole-pedal drag region
+    - <div mod-role="bypass-light"> bypass LED
+    - <div mod-role="bypass">       footswitch
+    - audio I/O loops {{#effect.ports.audio.input}}…{{/...}}
+-->
+<div class="mod-pedal myplugin-pedal mod-pedal-myplugin mod-{{color}} {{color}}">
+
+    <div mod-role="drag-handle" class="mod-drag-handle"></div>
+
+    <div class="mod-plugin-brand"><h1>{{brand}}</h1></div>
+    <div class="mod-plugin-name"><h1>{{label}}</h1></div>
+
+    <!-- Bypass light + footswitch (required by MOD pedalboard) -->
+    <div class="mod-light on" mod-role="bypass-light"></div>
+    <div class="mod-footswitch" mod-role="bypass"></div>
+
+    <!-- Single GAIN knob. To add more knobs, duplicate this block and
+         change the port symbol + title. The port symbol must match a
+         parameter declared in initParameter() (e.g. "gain"). -->
+    <div class="myplugin-controls">
+        <div class="mod-knob myplugin-knob">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="gain"></div>
+            <span class="mod-knob-title">GAIN</span>
+        </div>
+    </div>
+
+    <!-- Audio I/O — required structure for pedalboard connections.
+         MOD-UI expands these {{#…}}{{/…}} blocks once per audio port. -->
+    <div class="mod-pedal-input">
+        {{#effect.ports.audio.input}}
+        <div class="mod-input mod-input-disconnected" title="{{name}}"
+             mod-role="input-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-input-image"></div>
+        </div>
+        {{/effect.ports.audio.input}}
+    </div>
+    <div class="mod-pedal-output">
+        {{#effect.ports.audio.output}}
+        <div class="mod-output mod-output-disconnected" title="{{name}}"
+             mod-role="output-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-output-image"></div>
+        </div>
+        {{/effect.ports.audio.output}}
+    </div>
+
+</div>

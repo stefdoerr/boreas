@@ -1,0 +1,138 @@
+/*
+ * MyPlugin — MOD pedal stylesheet.
+ *
+ * Deliberately minimal: only positions our own controls and the audio
+ * jacks. The pedal frame texture, brand/label fonts, bypass light and
+ * footswitch visuals are all left to MOD-UI's built-in skin (selected
+ * by `modgui:model` / `modgui:panel` / `modgui:color` / `modgui:knob`
+ * in modgui.ttl). If you want a custom look, add `background:`,
+ * `box-shadow:`, custom `.mod-plugin-brand h1 { ... }` etc. here.
+ *
+ * Conventions:
+ *   - The pedal MUST be position:absolute with a fixed pixel
+ *     width/height — MOD's pedalboard places pedals at absolute
+ *     coordinates on the board.
+ *   - Don't set overflow:hidden on the pedal — MOD-UI positions the
+ *     audio jacks outside the pedal frame (left:-44px / right:-44px)
+ *     and clipping would hide the cable endpoints.
+ *   - MOD-UI provides default visuals for .mod-input / .mod-output
+ *     (audio jacks), .mod-knob-image (rotary knobs), .mod-light, and
+ *     .mod-footswitch. We only position them.
+ */
+
+/* ============================ Pedal frame ============================ */
+.myplugin-pedal {
+    width: 320px;
+    height: 160px;
+    position: absolute;
+}
+
+/* Drag handle covers the whole pedal so it can be dragged anywhere on
+   it. Lives behind all interactive controls (z-index 0) so they remain
+   clickable. */
+.myplugin-pedal .mod-drag-handle {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    cursor: move;
+}
+
+/* All interactive / informative elements sit above the drag handle. */
+.myplugin-pedal .mod-plugin-brand,
+.myplugin-pedal .mod-plugin-name,
+.myplugin-pedal .myplugin-controls,
+.myplugin-pedal .mod-light,
+.myplugin-pedal .mod-footswitch,
+.myplugin-pedal .mod-pedal-input,
+.myplugin-pedal .mod-pedal-output {
+    z-index: 1;
+}
+
+/* ============================ Branding text ============================
+   MOD-UI styles the text itself (font, colour, weight) via its built-in
+   panel CSS. We only position the containers. */
+.myplugin-pedal .mod-plugin-brand {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    pointer-events: none;
+}
+.myplugin-pedal .mod-plugin-name {
+    position: absolute;
+    top: 28px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    pointer-events: none;
+}
+
+/* ============================ Controls ============================
+   MOD-UI applies its built-in knob sprite from `modgui:knob` in
+   modgui.ttl. Don't override .mod-knob-image's background-image unless
+   you want a custom sprite (drop it at modgui/knobs/<name>.png and
+   reference via `background-image: url(/resources/knobs/<name>.png{{{ns}}}`).
+   The film_strip widget rotates frames by setting
+   background-position-x at runtime; width/height set display size. */
+.myplugin-pedal .myplugin-controls {
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+}
+.myplugin-pedal .myplugin-knob {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.myplugin-pedal .myplugin-knob .mod-knob-image {
+    width: 56px;
+    height: 56px;
+    background-size: auto 56px;
+}
+.myplugin-pedal .myplugin-knob .mod-knob-title {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+}
+
+/* ============================ Bypass light + footswitch ============================
+   MOD-UI draws the actual graphics (LED, switch) from the panel skin.
+   We only position the containers. .on is toggled by MOD-UI on bypass
+   state changes — the default styling already animates correctly. */
+.myplugin-pedal .mod-light {
+    position: absolute;
+    bottom: 14px;
+    left: 18px;
+}
+.myplugin-pedal .mod-footswitch {
+    position: absolute;
+    bottom: 6px;
+    left: 38px;
+}
+
+/* ============================ Audio I/O jacks ============================
+   The jacks stick OUTSIDE the pedal frame (MOD-UI convention — see the
+   default rule in pedals.css: left:-44px / right:-44px). MOD-UI styles
+   the visible jack via .mod-input / .mod-output backgrounds; we only
+   position the containers.
+
+   z-index 30 matches MOD's default so jacks render above pedalboard
+   cables. */
+.myplugin-pedal .mod-pedal-input,
+.myplugin-pedal .mod-pedal-output {
+    position: absolute;
+    top: 50px;
+    width: 44px;
+    height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+    z-index: 30;
+}
+.myplugin-pedal .mod-pedal-input  { left:  -44px; align-items: flex-end;   }
+.myplugin-pedal .mod-pedal-output { right: -44px; align-items: flex-start; }

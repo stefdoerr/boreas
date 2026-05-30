@@ -1,0 +1,41 @@
+@prefix lv2:    <http://lv2plug.in/ns/lv2core#> .
+@prefix modgui: <http://moddevices.com/ns/modgui#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://myplugin.local/plugins/myplugin>
+    modgui:gui [
+        modgui:resourcesDirectory <modgui> ;
+        modgui:iconTemplate       <modgui/icon-myplugin.html> ;
+        modgui:stylesheet         <modgui/stylesheet-myplugin.css> ;
+        modgui:javascript         <modgui/script-myplugin.js> ;
+        # Add `modgui:screenshot <modgui/screenshot-myplugin.png>` and
+        # `modgui:thumbnail <modgui/thumbnail-myplugin.png>` when you
+        # have a finalised pedal layout — MOD-UI uses them in the plugin
+        # library preview. Take the screenshot from inside MOD Desktop /
+        # MOD-UI itself rather than rendering locally.
+
+        # Mustache tokens MOD-UI substitutes at render time. `brand` and
+        # `label` are the strings shown on the pedal frame; `model` and
+        # `panel` pick built-in skins (see MOD-UI's pedals.css); `color`
+        # / `knob` pick built-in palettes and knob sprites — or you can
+        # override them with the custom CSS / sprite in this directory.
+        modgui:brand "myplugin" ;
+        modgui:label "My Plugin" ;
+        # `model` + `panel` + `color` + `knob` pick MOD-UI's built-in
+        # skins for the pedal frame and knobs. Swap any of these strings
+        # to retheme — see MOD-UI's pedals.css / knobs.css for the full
+        # list of palettes ("boxy", "rounded"; "1-knob"..."6-knob";
+        # "wood1"-"wood4", "metal1"-"metal3"; "gold", "yellow", "red", …).
+        modgui:model "boxy" ;
+        modgui:panel "1-knob" ;
+        modgui:color "wood3" ;
+        modgui:knob  "gold" ;
+
+        # Every LV2 port the modgui binds to must be listed here. Symbols
+        # must match the `lv2:symbol` strings in the generated <plugin>.ttl
+        # (which come from initParameter()'s `parameter.symbol` field).
+        modgui:port [
+            lv2:symbol "gain" ;
+            lv2:name "Gain"
+        ]
+    ] .
