@@ -1,0 +1,82 @@
+/* Boreas pedal — custom frame (MOD-UI's default skin paints no background for a
+   custom class, so we draw our own) + correct stacking so the custom controls
+   sit above MOD's full-pedal drag-handle overlay (z-index:20). */
+
+.boreas-pedal {
+    position: relative;
+    width: 640px;
+    height: 250px;
+    box-sizing: border-box;
+    border-radius: 14px;
+    background:
+        radial-gradient(ellipse at 50% -10%, rgba(150, 200, 255, 0.18), transparent 60%),
+        linear-gradient(160deg, #1c2738 0%, #243349 45%, #141c29 100%);
+    box-shadow:
+        inset 0 0 0 2px rgba(140, 190, 240, 0.15),
+        inset 0 0 40px rgba(0, 0, 0, 0.5),
+        0 6px 16px rgba(0, 0, 0, 0.6);
+    color: #dce8f5;
+    font-family: "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* Brand + plugin name (z-index 10, the band MOD uses for these) */
+.boreas-pedal .mod-plugin-brand { position: absolute; top: 12px; left: 20px; z-index: 10; }
+.boreas-pedal .mod-plugin-brand h1 {
+    margin: 0; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: rgba(180, 210, 245, 0.65); font-weight: 600;
+}
+.boreas-pedal .mod-plugin-name { position: absolute; top: 9px; right: 20px; z-index: 10; }
+.boreas-pedal .mod-plugin-name h1 {
+    margin: 0; font-size: 20px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: #bfe0ff; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Knob row — z-index 25 lifts it above the drag-handle so knobs are usable */
+.boreas-controls {
+    position: absolute; top: 54px; left: 20px; right: 20px; z-index: 25;
+    display: flex; justify-content: space-between;
+}
+.boreas-pedal .boreas-knob { width: 96px; text-align: center; }
+/* The knob is a MOD "film" widget that reads its sprite from the CSS
+   background-image — MOD does NOT inject one for a custom pedal frame. Without
+   it the widget never initialises, so the knob is invisible AND clicking it
+   trips the "blocked by addressing" guard. Ship the sprite under modgui/knobs/
+   and size the box to one square frame; background-size height must equal the
+   box height (frames are square) so MOD-UI counts 65 frames correctly. */
+.boreas-pedal .boreas-knob .mod-knob-image {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto;
+    background-image: url(/resources/knobs/black.png{{{ns}}});
+    background-repeat: no-repeat;
+    background-size: auto 64px;
+}
+.boreas-pedal .mod-knob-title {
+    display: block; margin-top: 6px; font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #a9c4de;
+}
+
+/* Mode dropdown + Freeze/Clear buttons — z-index 25 so clicks land on them,
+   not the drag-handle overlay. */
+.boreas-extra {
+    position: absolute; top: 168px; left: 20px; right: 20px; z-index: 25;
+    display: flex; align-items: center; gap: 14px;
+}
+.boreas-mode { display: flex; align-items: center; gap: 6px; }
+.boreas-mode-label { font-size: 11px; letter-spacing: 0.12em; color: #a9c4de; text-transform: uppercase; }
+.boreas-mode-select {
+    background: #0f1722; color: #dce8f5; cursor: pointer;
+    border: 1px solid rgba(140, 190, 240, 0.3); border-radius: 4px; padding: 3px 6px; font-size: 11px;
+}
+.boreas-btn {
+    padding: 6px 16px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: #dce8f5; background: linear-gradient(180deg, #2a3b52, #1a2636);
+    border: 1px solid rgba(140, 190, 240, 0.3); border-radius: 5px; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.boreas-btn:hover  { background: linear-gradient(180deg, #33485f, #202f42); }
+.boreas-btn:active { background: #3c92d6; color: #fff; border-color: #6fb6ec; }
+
+/* Bypass light + footswitch (MOD draws these; we only position them) */
+.boreas-pedal .mod-light      { position: absolute; bottom: 40px; left: 50%; margin-left: -7px; }
+.boreas-pedal .mod-footswitch { position: absolute; bottom: 8px;  left: 50%; margin-left: -12px; }

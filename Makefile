@@ -31,11 +31,11 @@
 # PLUGIN_URI_BASE — stable LV2 URI prefix (does NOT need to resolve over
 #              HTTP — LV2 URIs are pure identifiers — but pick something
 #              unique so plugins from different vendors never collide).
-PLUGIN          := myplugin
-PLUGIN_DIR      := plugins/MyPlugin
-BRAND           := myplugin
-LABEL           := My Plugin
-PLUGIN_URI_BASE := http://myplugin.local/plugins
+PLUGIN          := boreas
+PLUGIN_DIR      := plugins/Boreas
+BRAND           := Stefan
+LABEL           := Boreas
+PLUGIN_URI_BASE := http://boreas.local/plugins
 # ---------------------------------------------------------------------------
 
 # Set BETA=1 to produce a side-by-side beta build: distinct LV2 URI,
@@ -101,7 +101,6 @@ modgui: ttl
 		cp -rf $(PLUGIN_DIR)/modgui/knobs $(BUNDLE)/modgui/; \
 	fi
 	sed -e 's|$(PLUGIN_URI_BASE)/$(PLUGIN)|$(PLUGIN_URI)|g' \
-	    -e 's|modgui:brand "$(BRAND)"|modgui:brand "$(BUNDLE_NAME)"|' \
 	    -e 's|modgui:label "$(LABEL)"|modgui:label "$(BUNDLE_LABEL)"|' \
 	    $(PLUGIN_DIR)/modgui.ttl > $(BUNDLE)/modgui.ttl
 	@if ! grep -q 'modgui.ttl' $(BUNDLE)/manifest.ttl; then \

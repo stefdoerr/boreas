@@ -1,0 +1,74 @@
+<div class="mod-pedal boreas-pedal mod-pedal-boreas mod-{{color}} {{color}}">
+
+    <div mod-role="drag-handle" class="mod-drag-handle"></div>
+
+    <div class="mod-plugin-brand"><h1>{{brand}}</h1></div>
+    <div class="mod-plugin-name"><h1>{{label}}</h1></div>
+
+    <div class="mod-light on" mod-role="bypass-light"></div>
+    <div class="mod-footswitch" mod-role="bypass"></div>
+
+    <div class="boreas-controls">
+        <div class="mod-knob boreas-knob">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="speed"></div>
+            <span class="mod-knob-title">SPEED</span>
+        </div>
+        <div class="mod-knob boreas-knob">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="layer"></div>
+            <span class="mod-knob-title">LAYER</span>
+        </div>
+        <div class="mod-knob boreas-knob">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="gliss"></div>
+            <span class="mod-knob-title">GLISS</span>
+        </div>
+        <div class="mod-knob boreas-knob">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="dry_vol"></div>
+            <span class="mod-knob-title">DRY</span>
+        </div>
+        <div class="mod-knob boreas-knob">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="effect_vol"></div>
+            <span class="mod-knob-title">EFFECT</span>
+        </div>
+        <div class="mod-knob boreas-knob">
+            <div class="mod-knob-image" mod-role="input-control-port" mod-port-symbol="tone"></div>
+            <span class="mod-knob-title">TONE</span>
+        </div>
+    </div>
+
+    <div class="boreas-extra">
+        <div class="boreas-mode">
+            <span class="boreas-mode-label">MODE</span>
+            <select class="boreas-mode-select">
+                <option value="moment">Moment</option>
+                <option value="latch">Latch</option>
+            </select>
+        </div>
+        <div class="boreas-mode">
+            <span class="boreas-mode-label">METHOD</span>
+            <select class="boreas-mode-select boreas-method-select">
+                <option value="sinusoidal">Sinusoidal</option>
+                <option value="loop">Loop</option>
+            </select>
+        </div>
+        <button type="button" class="boreas-btn boreas-freeze">FREEZE</button>
+        <button type="button" class="boreas-btn boreas-clear">CLEAR</button>
+    </div>
+
+    <div class="mod-pedal-input">
+        {{#effect.ports.audio.input}}
+        <div class="mod-input mod-input-disconnected" title="{{name}}"
+             mod-role="input-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-input-image"></div>
+        </div>
+        {{/effect.ports.audio.input}}
+    </div>
+    <div class="mod-pedal-output">
+        {{#effect.ports.audio.output}}
+        <div class="mod-output mod-output-disconnected" title="{{name}}"
+             mod-role="output-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-output-image"></div>
+        </div>
+        {{/effect.ports.audio.output}}
+    </div>
+
+</div>

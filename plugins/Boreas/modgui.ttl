@@ -1,0 +1,33 @@
+@prefix lv2:    <http://lv2plug.in/ns/lv2core#> .
+@prefix modgui: <http://moddevices.com/ns/modgui#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://boreas.local/plugins/boreas>
+    modgui:gui [
+        modgui:resourcesDirectory <modgui> ;
+        modgui:iconTemplate       <modgui/icon-boreas.html> ;
+        modgui:stylesheet         <modgui/stylesheet-boreas.css> ;
+        modgui:javascript         <modgui/script-boreas.js> ;
+        # screenshot + thumbnail are REQUIRED by mod-ui's scanner: MOD Desktop's
+        # get_all_plugins() segfaults on an uninitialised char* if a modgui omits
+        # them. Replace these placeholder PNGs with a real capture from MOD-UI.
+        modgui:screenshot         <modgui/screenshot-boreas.png> ;
+        modgui:thumbnail          <modgui/thumbnail-boreas.png> ;
+        modgui:brand "Stefan" ;
+        modgui:label "Boreas" ;
+        modgui:model "boxy" ;
+        modgui:panel "6-knob" ;
+        modgui:color "metal2" ;
+        modgui:knob  "gold" ;
+        modgui:port
+            [ lv2:symbol "footswitch" ; lv2:name "Freeze" ] ,
+            [ lv2:symbol "clear" ;      lv2:name "Clear" ] ,
+            [ lv2:symbol "mode" ;       lv2:name "Mode" ] ,
+            [ lv2:symbol "speed" ;      lv2:name "Speed" ] ,
+            [ lv2:symbol "layer" ;      lv2:name "Layer" ] ,
+            [ lv2:symbol "gliss" ;      lv2:name "Gliss" ] ,
+            [ lv2:symbol "dry_vol" ;    lv2:name "Dry" ] ,
+            [ lv2:symbol "effect_vol" ; lv2:name "Effect" ] ,
+            [ lv2:symbol "method" ;     lv2:name "Method" ] ,
+            [ lv2:symbol "tone" ;       lv2:name "Tone" ]
+    ] .

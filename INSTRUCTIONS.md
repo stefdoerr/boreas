@@ -236,18 +236,25 @@ $select.val(VALUES[Math.round(event.value)]);
 Keep a guard flag in `icon.data('suppress-emit', ...)` so updating the
 `<select>` programmatically doesn't fire a feedback `set_port_value`.
 
-### Default vs custom knob sprite
-The template uses MOD-UI's built-in knob sprites — pick a palette via
-`modgui:knob "gold"` (or "yellow", "red", etc.) in `modgui.ttl`. The
-stylesheet deliberately does NOT override `.mod-knob-image`'s
-background, so MOD-UI applies its own knob asset based on the palette
-name. To switch to a custom knob, drop a horizontal film-strip PNG at
-`modgui/knobs/<name>.png` and add a CSS rule:
+### Custom pedal frames MUST ship their own knob sprite
+`modgui:knob "gold"` only supplies a knob sprite while you use MOD-UI's
+**default** pedal skin. With a **custom pedal frame**, MOD-UI no longer
+injects it: each knob is a "film" widget that reads its sprite from the
+CSS `background-image`, and with none the widget never initialises —
+the knobs are **invisible** AND clicking one pops **"Parameter value
+change blocked by the active addressing"** (a red herring; the
+`enabled` flag is set in the same init step that never ran). Ship a
+sprite (one is bundled at `modgui/knobs/black.png` — 65 square 128 px
+frames) and reference it with an explicit box size + `background-size`
+whose height equals the box height:
 ```css
-.myplugin-pedal .mod-knob-image {
-    background-image: url(/resources/knobs/<name>.png{{{ns}}});
+.boreas-pedal .mod-knob-image {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto;
+    background-image: url(/resources/knobs/black.png{{{ns}}});
     background-repeat: no-repeat;
-    background-position: left center;
+    background-size: auto 64px;   /* == box height; do NOT omit */
 }
 ```
 
@@ -258,12 +265,15 @@ scoping the request to your plugin's modgui directory and busting the
 browser cache when the plugin version changes. Keep it on every
 resource URL in the CSS.
 
-### Screenshots
-MOD-UI generates pedalboard preview thumbnails on demand once the
-plugin is loaded; you usually don't need to ship a `screenshot-*.png`
-during development. When ready to publish, take a clean screenshot from
-inside MOD Desktop / MOD-UI itself and reference it from `modgui.ttl`
-via `modgui:screenshot` + `modgui:thumbnail`.
+### Screenshots — REQUIRED, not optional
+`modgui.ttl` **must** declare both `modgui:screenshot` and
+`modgui:thumbnail` and ship the PNG files under `modgui/`. If they are
+omitted, MOD Desktop's plugin scanner (`get_all_plugins()` in
+`libmod_utils.so`) dereferences an uninitialised `char*` and **segfaults
+at startup** — the symptom is "Could not start MOD UI. Process crashed"
+(with jackd showing `caught signal 15`, a red herring). Verified on MOD
+Desktop 0.0.12. Placeholder PNGs are fine during development; replace
+them with a clean capture from inside MOD-UI when publishing.
 
 ---
 

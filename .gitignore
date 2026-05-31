@@ -15,3 +15,8 @@
 *.dll
 *.swp
 .DS_Store
+
+# compiled native test binaries
+tests/test_*
+!tests/test_*.cpp
+!tests/test_*.hpp
