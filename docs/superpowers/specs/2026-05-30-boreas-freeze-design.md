@@ -239,6 +239,9 @@ Centralised named constants (single place to tune; some intended for future prom
   testing.
 - Keep required structural elements: `drag-handle`, `bypass-light`, `bypass`, and the audio I/O
   `{{#effect.ports.audio.*}}` loops.
+- **Declare `modgui:screenshot` + `modgui:thumbnail` and ship the PNGs.** MOD Desktop's scanner
+  segfaults at startup on a modgui that omits them (uninitialised `char*` in `get_all_plugins`),
+  crashing the whole UI — this is REQUIRED, not optional. Placeholder PNGs are fine to start.
 
 ---
 
