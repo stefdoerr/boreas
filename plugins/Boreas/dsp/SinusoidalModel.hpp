@@ -68,22 +68,35 @@ public:
             }
         }
         std::sort(tmp, tmp + nt, [](const Pk& x, const Pk& y) { return x.a > y.a; });
-        int keep = nt;
         const int cap = (maxPeaks < kMaxPeaks) ? maxPeaks : kMaxPeaks;
-        if (keep > cap) keep = cap;
+
+        // Greedy minimum-separation selection (strongest first): keep one peak
+        // per ~kMinPeakSepHz band and drop the close weaker ones. A captured frame
+        // of real audio smears each partial into a cluster of neighbouring peaks;
+        // summed as steady sinusoids those clusters BEAT against each other, an
+        // amplitude flutter in the choppy 15-60 Hz range. Enforcing separation
+        // pushes any residual beating above ~kMinPeakSepHz, where it reads as
+        // timbre rather than chop.
+        Pk sel[kMaxPeaks]; int keep = 0;
+        for (int i = 0; i < nt && keep < cap; ++i) {
+            bool ok = true;
+            for (int j = 0; j < keep; ++j)
+                if (std::fabs(tmp[i].f - sel[j].f) < kMinPeakSepHz) { ok = false; break; }
+            if (ok) sel[keep++] = tmp[i];
+        }
 
         double sm = 0.0;
-        for (int i = 0; i < keep; ++i) sm += (double)tmp[i].a * tmp[i].a;
+        for (int i = 0; i < keep; ++i) sm += (double)sel[i].a * sel[i].a;
         const float scale = (sm > 1e-12) ? inputRMS / (float)std::sqrt(0.5 * sm) : 0.0f;
 
         const float w2pi = 2.0f * (float)M_PI / (float)fs_;
         nPeaks_ = keep;
         for (int i = 0; i < keep; ++i) {
-            freq_[i]   = tmp[i].f;
-            amp_[i]    = tmp[i].a * scale;                 // fold level into amplitude
-            phase_[i]  = tmp[i].p;
-            dphase_[i] = tmp[i].f * w2pi;
-            osc_[i]    = (tmp[i].p < 0.0f) ? tmp[i].p + 2.0f*(float)M_PI : tmp[i].p;
+            freq_[i]   = sel[i].f;
+            amp_[i]    = sel[i].a * scale;                 // fold level into amplitude
+            phase_[i]  = sel[i].p;
+            dphase_[i] = sel[i].f * w2pi;
+            osc_[i]    = (sel[i].p < 0.0f) ? sel[i].p + 2.0f*(float)M_PI : sel[i].p;
         }
     }
 
@@ -134,6 +147,7 @@ private:
     static constexpr int   kCollect  = 256;
     static constexpr int   kLUT      = 4096;          // power of two
     static constexpr float kThreshRel = 0.001f;       // -60 dB relative peak threshold
+    static constexpr float kMinPeakSepHz = 60.0f;     // min spacing between kept partials (anti-beating)
 
     double fs_ = 48000.0;
     std::vector<float> re_, im_, lut_;
