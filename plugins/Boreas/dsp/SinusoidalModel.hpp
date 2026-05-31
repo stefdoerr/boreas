@@ -100,14 +100,17 @@ public:
         }
     }
 
-    // One output sample: sum the oscillator bank.
-    float process() {
+    // One output sample: sum the oscillator bank. pitchScale (≈1.0) detunes every
+    // partial for the Movement pitch shimmer; pitchScale == 1.0 is the unmodulated
+    // path (dphase * 1.0f is exact, so the frozen tone is bit-identical).
+    float process(float pitchScale = 1.0f) {
         float y = 0.0f;
         const float twoPi = 2.0f * (float)M_PI;
         for (int i = 0; i < nPeaks_; ++i) {
             y += amp_[i] * fastSin(osc_[i]);
-            osc_[i] += dphase_[i];
+            osc_[i] += dphase_[i] * pitchScale;
             if (osc_[i] >= twoPi) osc_[i] -= twoPi;
+            else if (osc_[i] < 0.0f) osc_[i] += twoPi;
         }
         return y;
     }

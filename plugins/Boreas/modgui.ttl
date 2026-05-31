@@ -29,5 +29,7 @@
             [ lv2:symbol "dry_vol" ;    lv2:name "Dry" ] ,
             [ lv2:symbol "effect_vol" ; lv2:name "Effect" ] ,
             [ lv2:symbol "method" ;     lv2:name "Method" ] ,
-            [ lv2:symbol "tone" ;       lv2:name "Tone" ]
+            [ lv2:symbol "tone" ;       lv2:name "Tone" ] ,
+            [ lv2:symbol "move_rate" ;  lv2:name "Move Rate" ] ,
+            [ lv2:symbol "move_depth" ; lv2:name "Move Depth" ]
     ] .

@@ -7,6 +7,7 @@
 #include "CircularBuffer.hpp"
 #include "SinusoidalModel.hpp"
 #include "ToneFilter.hpp"
+#include "Modulator.hpp"
 
 namespace boreas {
 
@@ -14,10 +15,11 @@ enum Mode   { ModeMoment = 0, ModeLatch = 1 };
 enum Method { MethodSinusoidal = 0, MethodLoop = 1 };
 
 // Discrete layer-stack freeze. Each Freeze press pushes a new frozen layer
-// (captured + analysed); layers play summed. Clear removes the most-recent
-// layer (or all). Each layer fades in (GLISS for stacked layers, SPEED for the
-// first / Moment) and fades out (SPEED). Method selects the per-layer voice:
-// Sinusoidal (oscillator bank) or Loop (crossfade loop). Tone = output high-cut.
+// (captured + analysed); layers play summed. Clear removes the most-recent layer
+// (or all). SPEED sets every layer's VOLUME fade in/out; GLISS slides a new layer
+// up to PITCH (portamento, Sinusoidal method only). Method selects the per-layer
+// voice: Sinusoidal (oscillator bank) or Loop (crossfade loop). Tone = output
+// high-cut. Movement (per layer) adds amplitude breathing + pitch shimmer.
 class FreezeEngine {
 public:
     static constexpr int kMaxLayers = 6;
@@ -37,6 +39,7 @@ public:
         for (int i = 0; i < kMaxLayers; ++i) {
             layers_[i].buf.assign((size_t)W_, 0.0f);
             layers_[i].sin.prepare(sampleRate);
+            mod_[i].prepare(sampleRate);
         }
         tone_.prepare(sampleRate);
         reset();
@@ -48,6 +51,7 @@ public:
             layers_[i].sin.clear();
             layers_[i].active = layers_[i].fading = false;
             layers_[i].gain = layers_[i].target = layers_[i].inc = 0.0f;
+            layers_[i].glide = layers_[i].glideMul = 1.0f;
             layers_[i].phase = 0;
         }
         top_ = 0;
@@ -64,6 +68,8 @@ public:
     void setGliss(double g) { gliss_  = g; }
     void setTone(double t)  { tone_.setTone(t); }
     void setLookback(int n) { lookback_ = n; }
+    void setMoveRate(double r)  { for (int i = 0; i < kMaxLayers; ++i) mod_[i].setRate(r); }
+    void setMoveDepth(double d) { for (int i = 0; i < kMaxLayers; ++i) mod_[i].setDepth(d); }
 
     void writeInput(float x) { ring_.write(x); }
 
@@ -72,7 +78,7 @@ public:
         if (mode_ == ModeMoment) {
             if (top_ == 0) addLayer(speedFadeSamples());        // Moment: single layer
         } else {
-            addLayer(top_ == 0 ? speedFadeSamples() : glissFadeSamples());  // Latch: stack
+            addLayer(speedFadeSamples());                       // Latch: every layer swells in over SPEED
         }
     }
     void onFreezeRelease() { if (mode_ == ModeMoment) removeLastLayer(); }
@@ -94,7 +100,16 @@ public:
         for (int i = 0; i < kMaxLayers; ++i) {
             Layer& L = layers_[i];
             if (!L.active) continue;
-            wet += voiceRead(L) * L.gain;
+            const Modulator::Out m = mod_[i].step();           // breathing + pitch shimmer
+            float v;
+            if (method_ == MethodSinusoidal) {
+                const float gp = L.glide;                      // GLISS: slide up to pitch
+                if (gp < 1.0f) { L.glide *= L.glideMul; if (L.glide > 1.0f) L.glide = 1.0f; }
+                v = L.sin.process(m.pitch * gp);
+            } else {
+                v = readLoop(L.buf.data(), L.phase);
+            }
+            wet += v * m.amp * L.gain;
             L.gain += L.inc;
             if (L.inc < 0.0f) { if (L.gain <= 0.0f)     { L.gain = 0.0f;     L.active = false; L.sin.clear(); } }
             else              { if (L.gain >= L.target) { L.gain = L.target; L.inc = 0.0f; } }
@@ -114,13 +129,13 @@ private:
     struct Layer {
         bool  active = false, fading = false;
         float gain = 0.0f, target = 0.0f, inc = 0.0f;
+        float glide = 1.0f, glideMul = 1.0f;       // GLISS pitch slide (ratio -> 1.0)
         int   phase = 0;
         std::vector<float> buf;
         SinusoidalModel    sin;
     };
 
     int speedFadeSamples() const { int n = (int)(speedToSeconds(speed_) * fs_); return n < 64 ? 64 : n; }
-    int glissFadeSamples() const { int n = glissSamples(gliss_, fs_);          return n < 240 ? 240 : n; }
 
     static void beginFade(Layer& L, float target, int samples) {
         L.fading = (target <= 0.0f);
@@ -137,12 +152,20 @@ private:
         L.active = true;
         L.target = layerLevel_;
         L.inc = (fadeSamples > 0) ? L.target / (float)fadeSamples : L.target;
+        // GLISS: start this layer below pitch and slide up to it (bigger gliss =
+        // deeper + slower swoop). gliss 0 -> no slide.
+        if (gliss_ > 0.0) {
+            const float start = std::pow(2.0f, -(float)gliss_);   // gliss 1 -> 1 octave below
+            int g = glissSamples(gliss_, fs_); if (g < 1) g = 1;
+            L.glide = start;
+            L.glideMul = std::pow(1.0f / start, 1.0f / (float)g);
+        } else {
+            L.glide = 1.0f; L.glideMul = 1.0f;
+        }
+        mod_[top_].reset(addSeed_++);                           // fresh breathing per layer
         ++top_;
     }
 
-    float voiceRead(Layer& L) {
-        return (method_ == MethodSinusoidal) ? L.sin.process() : readLoop(L.buf.data(), L.phase);
-    }
     float readLoop(const float* buf, int& phase) {
         if (phase < 0 || phase >= W_) phase = C_;
         float y;
@@ -161,12 +184,13 @@ private:
     CircularBuffer     ring_;
     std::vector<float> xfadeIn_, xfadeOut_;
     Layer              layers_[kMaxLayers];
+    Modulator          mod_[kMaxLayers];
     ToneFilter         tone_;
 
     int    mode_ = ModeLatch, method_ = MethodSinusoidal;
     double speed_ = 0.2, gliss_ = 0.0;
     float  layerLevel_ = 1.0f;
-    int    top_ = 0;
+    int    top_ = 0, addSeed_ = 0;
 };
 
 } // namespace boreas

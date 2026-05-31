@@ -43,6 +43,8 @@ public:
         kParamEffectVol,
         kParamMethod,
         kParamTone,
+        kParamMoveRate,
+        kParamMoveDepth,
         kNumParams
     };
 
@@ -139,6 +141,16 @@ protected:
             parameter.name   = "Tone"; parameter.symbol = "tone";
             parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.4f;
             break;
+        case kParamMoveRate:
+            parameter.hints  = kParameterIsAutomatable;
+            parameter.name   = "Move Rate";  parameter.symbol = "move_rate";
+            parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.3f;
+            break;
+        case kParamMoveDepth:
+            parameter.hints  = kParameterIsAutomatable;
+            parameter.name   = "Move Depth"; parameter.symbol = "move_depth";
+            parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -154,6 +166,8 @@ protected:
         case kParamEffectVol:  return fEffectVol;
         case kParamMethod:     return fMethod;
         case kParamTone:       return fTone;
+        case kParamMoveRate:   return fMoveRate;
+        case kParamMoveDepth:  return fMoveDepth;
         }
         return 0.0f;
     }
@@ -170,6 +184,8 @@ protected:
         case kParamEffectVol:  fEffectVol = value;  break;
         case kParamMethod:     fMethod = value;     break;
         case kParamTone:       fTone = value;       break;
+        case kParamMoveRate:   fMoveRate = value;   break;
+        case kParamMoveDepth:  fMoveDepth = value;  break;
         }
     }
 
@@ -198,6 +214,8 @@ protected:
         engine_.setSpeed(fSpeed);
         engine_.setLayer(fLayer);
         engine_.setGliss(fGliss);
+        engine_.setMoveRate(fMoveRate);
+        engine_.setMoveDepth(fMoveDepth);
 
         const bool fsNow = fFootswitch >= 0.5f;
         if (fsNow && !fsPrev_) engine_.onFreezePress();
@@ -235,6 +253,7 @@ private:
     float fDryVol = 0.5f, fEffectVol = 0.5f;
     float fMethod = 0.0f;   // 0 = Sinusoidal, 1 = Loop
     float fTone = 0.4f;     // high-cut: 1 = open, 0 = dark (~2 kHz default tames frozen-noise buzz)
+    float fMoveRate = 0.3f, fMoveDepth = 0.0f;   // Movement LFO (depth 0 = off, bit-identical)
 
     bool     fsPrev_ = false, clrPrev_ = false, clrWiped_ = false;
     uint32_t clrHeldFrames_ = 0, clrHoldThresh_ = 19200;   // ~0.4 s @ 48 kHz

@@ -9,6 +9,8 @@ constexpr double kWindowSec     = 0.15;
 constexpr double kSpeedMinSec   = 0.005;   // at speed = 1.0 (fast)
 constexpr double kSpeedMaxSec   = 4.0;     // at speed = 0.0 (slow)
 constexpr double kGlissMaxSec   = 2.0;     // at gliss = 1.0
+constexpr double kMoveRateMinHz = 0.05;    // Movement LFO at rate = 0.0 (slow breath)
+constexpr double kMoveRateMaxHz = 8.0;     // at rate = 1.0 (fast tremolo)
 
 // Capture offset behind the write head, in samples. Default 0 = "freeze now".
 // Kept as a single constant so it can later be promoted to an LV2 port for
@@ -39,6 +41,13 @@ inline int glissSamples(double gliss, double sampleRate) {
     if (gliss < 0.0) gliss = 0.0;
     if (gliss > 1.0) gliss = 1.0;
     return (int)(gliss * gliss * kGlissMaxSec * sampleRate);
+}
+
+// Movement-rate knob (0..1) -> LFO frequency in Hz; exponential.
+inline double moveRateToHz(double r) {
+    if (r < 0.0) r = 0.0;
+    if (r > 1.0) r = 1.0;
+    return kMoveRateMinHz * std::pow(kMoveRateMaxHz / kMoveRateMinHz, r);
 }
 
 } // namespace boreas
