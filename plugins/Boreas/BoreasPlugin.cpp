@@ -41,7 +41,6 @@ public:
         kParamGliss,
         kParamDryVol,
         kParamEffectVol,
-        kParamMethod,
         kParamTone,
         kParamMoveRate,
         kParamMoveDepth,
@@ -60,7 +59,10 @@ protected:
     const char* getLicense()     const override { return "ISC"; }
     uint32_t    getVersion()     const override { return d_version(0, 1, 0); }
     const char* getDescription() const override {
-        return "Freeze / sound retainer: captures a slice of audio and loops it into an infinite drone.";
+        return "Freeze / infinite sustain. Captures a moment of sound and resynthesises it as a "
+               "smooth, endless drone via a spectral oscillator bank. Stack up to six layers, "
+               "slide them in by pitch (gliss), shape the high end (tone), and add organic "
+               "movement (breathing + shimmer). Mono in/out.";
     }
     int64_t getUniqueId() const override {
 #ifdef BOREAS_BETA
@@ -124,18 +126,6 @@ protected:
             parameter.name   = "Effect";  parameter.symbol = "effect_vol";
             parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.5f;
             break;
-        case kParamMethod: {
-            parameter.hints  = kParameterIsAutomatable | kParameterIsInteger;
-            parameter.name   = "Method"; parameter.symbol = "method";
-            parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.0f;
-            parameter.enumValues.count = 2;
-            parameter.enumValues.restrictedMode = true;
-            ParameterEnumerationValue* const ev = new ParameterEnumerationValue[2];
-            ev[0].value = 0.0f; ev[0].label = "Sinusoidal";
-            ev[1].value = 1.0f; ev[1].label = "Loop";
-            parameter.enumValues.values = ev;
-            break;
-        }
         case kParamTone:
             parameter.hints  = kParameterIsAutomatable;
             parameter.name   = "Tone"; parameter.symbol = "tone";
@@ -164,7 +154,6 @@ protected:
         case kParamGliss:      return fGliss;
         case kParamDryVol:     return fDryVol;
         case kParamEffectVol:  return fEffectVol;
-        case kParamMethod:     return fMethod;
         case kParamTone:       return fTone;
         case kParamMoveRate:   return fMoveRate;
         case kParamMoveDepth:  return fMoveDepth;
@@ -182,7 +171,6 @@ protected:
         case kParamGliss:      fGliss = value;      break;
         case kParamDryVol:     fDryVol = value;     break;
         case kParamEffectVol:  fEffectVol = value;  break;
-        case kParamMethod:     fMethod = value;     break;
         case kParamTone:       fTone = value;       break;
         case kParamMoveRate:   fMoveRate = value;   break;
         case kParamMoveDepth:  fMoveDepth = value;  break;
@@ -209,7 +197,6 @@ protected:
         float* const       out = outputs[0];
 
         engine_.setMode((int)(fMode + 0.5f));
-        engine_.setMethod((int)(fMethod + 0.5f));
         engine_.setTone(fTone);
         engine_.setSpeed(fSpeed);
         engine_.setLayer(fLayer);
@@ -251,7 +238,6 @@ private:
     float fFootswitch = 0.0f, fClear = 0.0f, fMode = 1.0f;
     float fSpeed = 0.2f, fLayer = 1.0f, fGliss = 0.0f;
     float fDryVol = 0.5f, fEffectVol = 0.5f;
-    float fMethod = 0.0f;   // 0 = Sinusoidal, 1 = Loop
     float fTone = 0.4f;     // high-cut: 1 = open, 0 = dark (~2 kHz default tames frozen-noise buzz)
     float fMoveRate = 0.3f, fMoveDepth = 0.0f;   // Movement LFO (depth 0 = off, bit-identical)
 

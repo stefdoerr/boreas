@@ -1,22 +1,14 @@
 function (event, funcs) {
 
-    var MODE_VALUES   = ['moment', 'latch'];   // index matches the C++ enum order
-    var METHOD_VALUES = ['sinusoidal', 'loop'];
+    var MODE_VALUES = ['moment', 'latch'];   // index matches the C++ enum order
 
     if (event.type === 'start') {
-        var icon   = event.icon;
+        var icon = event.icon;
 
-        // Mode dropdown -> integer enum port. (Mode select is the one WITHOUT
-        // the method class, so exclude it.)
-        icon.find('.boreas-mode-select').not('.boreas-method-select').on('change', function () {
+        // Mode dropdown -> integer enum port.
+        icon.find('.boreas-mode-select').on('change', function () {
             if (icon.data('suppress-emit')) return;
             funcs.set_port_value('mode', MODE_VALUES.indexOf(this.value));
-        });
-
-        // Method dropdown -> integer enum port.
-        icon.find('.boreas-method-select').on('change', function () {
-            if (icon.data('suppress-emit')) return;
-            funcs.set_port_value('method', METHOD_VALUES.indexOf(this.value));
         });
 
         // Momentary buttons: port = 1 while pressed, 0 on release. MOD reads
@@ -47,11 +39,7 @@ function (event, funcs) {
         var icon2 = event.icon;
         if (event.symbol === 'mode') {
             icon2.data('suppress-emit', true);
-            icon2.find('.boreas-mode-select').not('.boreas-method-select').val(MODE_VALUES[Math.round(event.value)]);
-            icon2.data('suppress-emit', false);
-        } else if (event.symbol === 'method') {
-            icon2.data('suppress-emit', true);
-            icon2.find('.boreas-method-select').val(METHOD_VALUES[Math.round(event.value)]);
+            icon2.find('.boreas-mode-select').val(MODE_VALUES[Math.round(event.value)]);
             icon2.data('suppress-emit', false);
         }
         return;

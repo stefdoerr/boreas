@@ -10,7 +10,7 @@ static void writeSine(FreezeEngine& e, double f, double fs, int n) {
 
 static void test_first_freeze_adds_layer() {
     FreezeEngine e; e.prepare(48000.0);
-    e.setMode(ModeLatch); e.setMethod(MethodSinusoidal); e.setSpeed(1.0); e.setGliss(0.0); e.setLayer(1.0); e.setTone(1.0);
+    e.setMode(ModeLatch); e.setSpeed(1.0); e.setGliss(0.0); e.setLayer(1.0); e.setTone(1.0);
     writeSine(e, 220, 48000, 24000);
     CHECK(e.layerCount() == 0); CHECK(!e.active());
     e.onFreezePress();
@@ -70,13 +70,13 @@ static double envSpread(FreezeEngine& e, int blocks, int blk) {
 }
 static void test_movement_breathes() {
     FreezeEngine a; a.prepare(48000.0);
-    a.setMode(ModeLatch); a.setMethod(MethodSinusoidal); a.setSpeed(1.0); a.setGliss(0.0); a.setLayer(1.0); a.setTone(1.0);
+    a.setMode(ModeLatch); a.setSpeed(1.0); a.setGliss(0.0); a.setLayer(1.0); a.setTone(1.0);
     a.setMoveRate(0.8); a.setMoveDepth(0.0);                       // movement OFF
     writeSine(a, 220, 48000, 24000); a.onFreezePress(); for (int i = 0; i < 1000; ++i) a.process();
     const double steady = envSpread(a, 200, 512);
 
     FreezeEngine b; b.prepare(48000.0);
-    b.setMode(ModeLatch); b.setMethod(MethodSinusoidal); b.setSpeed(1.0); b.setGliss(0.0); b.setLayer(1.0); b.setTone(1.0);
+    b.setMode(ModeLatch); b.setSpeed(1.0); b.setGliss(0.0); b.setLayer(1.0); b.setTone(1.0);
     b.setMoveRate(0.8); b.setMoveDepth(1.0);                       // movement ON
     writeSine(b, 220, 48000, 24000); b.onFreezePress(); for (int i = 0; i < 1000; ++i) b.process();
     const double breathing = envSpread(b, 200, 512);
@@ -90,22 +90,13 @@ static double zcr(FreezeEngine& e, int n) {            // zero crossings over n 
 }
 static void test_gliss_slides_up_to_pitch() {
     FreezeEngine e; e.prepare(48000.0);
-    e.setMode(ModeLatch); e.setMethod(MethodSinusoidal); e.setSpeed(1.0); e.setLayer(1.0);
+    e.setMode(ModeLatch); e.setSpeed(1.0); e.setLayer(1.0);
     e.setTone(1.0); e.setMoveDepth(0.0); e.setGliss(1.0);              // full slide (~octave below, ~2s)
     writeSine(e, 300, 48000, 24000); e.onFreezePress();
     const double early = zcr(e, 4800);                                // start of glide: pitch low
     for (int i = 0; i < 130000; ++i) e.process();                     // skip past the 2s glide
     const double late = zcr(e, 4800);                                 // settled at native pitch
     CHECK(late > early * 1.4);                                        // pitch rose
-}
-static void test_loop_method_sustains() {
-    FreezeEngine e; e.prepare(48000.0);
-    e.setMode(ModeLatch); e.setMethod(MethodLoop); e.setSpeed(1.0); e.setGliss(0.0); e.setLayer(1.0); e.setTone(1.0);
-    writeSine(e, 220, 48000, 24000);
-    e.onFreezePress();
-    for (int i = 0; i < 500; ++i) e.process();
-    double sumsq = 0; for (int i = 0; i < 4096; ++i) { const float y = e.process(); sumsq += y*y; }
-    CHECK(std::sqrt(sumsq/4096) > 0.02);
 }
 int main() {
     test_first_freeze_adds_layer();
@@ -115,6 +106,5 @@ int main() {
     test_moment_press_release();
     test_movement_breathes();
     test_gliss_slides_up_to_pitch();
-    test_loop_method_sustains();
     REPORT();
 }

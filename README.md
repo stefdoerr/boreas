@@ -1,110 +1,197 @@
-# MOD Plugin Template
+# Boreas
 
-A starting point for building LV2 audio plugins targeting
-[MOD Desktop](https://mod.audio/desktop/) (Linux x86_64) and
-[MOD Dwarf](https://mod.audio/dwarf/) (aarch64 hardware) using
-[DPF](https://github.com/DISTRHO/DPF).
+**Freeze / infinite-sustain pedal for [MOD Desktop](https://mod.audio/desktop/) and
+[MOD Dwarf](https://mod.audio/dwarf/).** Capture a moment of sound and hold it as a
+smooth, endless drone — stack layers, slide them in by pitch, shape the tone, and add
+organic movement. Built with the [DISTRHO Plugin Framework (DPF)](https://github.com/DISTRHO/DPF)
+as a mono-in / mono-out LV2 plugin.
 
-Includes a working passthrough+gain example, a MOD pedalboard GUI
-(modgui), a self-contained cross-build pipeline for the Dwarf, and a
-release flow that publishes prebuilt bundles as GitHub release assets.
+Boreas freezes by **spectral resynthesis**, not looping: it analyses the captured sound
+into a bank of steady sine oscillators and plays *those*, so the sustain is dead steady
+with no loop seam, no choppiness, and no buzz.
 
-## Quick start
+---
+
+## Controls
+
+Two footswitches and a row of knobs (plus a Mode selector):
+
+| Control | What it does |
+|---|---|
+| **Freeze** (footswitch) | Capture the current sound and start sustaining it. In **Latch** mode each press **stacks another layer**; in **Moment** mode it sustains only while held. |
+| **Clear** (footswitch) | **Tap** = remove the most-recent layer; **hold (≥ 0.4 s)** = wipe all layers. |
+| **Mode** | **Moment** (freeze only while Freeze is held) or **Latch** (freeze stays; stack layers). |
+| **Speed** | Per-layer **volume** fade in/out time — from ~5 ms (instant) to ~4 s (slow swell). |
+| **Layer** | Level each newly-stacked layer comes in at. |
+| **Gliss** | **Pitch** slide-in (portamento): a new layer starts below pitch and glides up. 0 = no slide; max ≈ one octave over ~2 s. |
+| **Tone** | Output high-cut. ~500 Hz (dark) → ~18 kHz (open); the default (~2 kHz) tames frozen high-frequency hiss. |
+| **Rate** / **Depth** | **Movement** LFO — organic amplitude breathing + a subtle pitch shimmer. Rate ≈ 0.05–8 Hz. **Depth = 0 is off** (the freeze is then perfectly static). |
+| **Dry** / **Effect** | Output mix of the dry input and the frozen signal. |
+
+Up to **six layers** can be stacked.
+
+---
+
+## How it works (DSP)
+
+```
+input ──► ring buffer (1 s) ──────────────────────────────► dry ──┐
+                │  (Freeze press)                                  │
+                ▼                                                  ▼
+        capture 150 ms window                                  Dry × in
+                │                                                  +
+                ▼                                            Effect × wet ──► out
+        ┌───────────────────────────────────────┐                ▲
+        │ per layer (×6):                        │                │
+        │   FFT → spectral peaks → oscillator    │── Σ ─► Tone ─► tanh
+        │   bank  +  Movement  +  Gliss  +  fade  │   (high-cut)  (soft-limit)
+        └───────────────────────────────────────┘
+```
+
+### 1. Continuous capture
+The input is always written into a 1-second **ring buffer**. When you press **Freeze**,
+the most-recent **150 ms** window is copied out and frozen — nothing is recorded ahead of
+time, so the capture is "what you just played." (Only that 150 ms is used today; the rest
+of the ring is reserved headroom for a future **Lookback** control — capturing a window
+from *before* the stomp — which the capture path already supports. *TODO.*)
+
+### 2. Spectral resynthesis (the core)
+Each frozen layer is built by a **sinusoidal model** (`SinusoidalModel.hpp`):
+
+1. The 150 ms window is **Hann-windowed** and run through an **8192-point FFT**.
+2. **Spectral peaks** are picked (local maxima above −60 dB) and refined to sub-bin
+   accuracy by **parabolic interpolation**, giving each partial a precise
+   *frequency, amplitude, and phase*. Up to ~120 partials are kept.
+3. A **minimum 60 Hz separation** is enforced between kept partials. This is the key to
+   the smooth sound: a real recording smears each harmonic into a little cluster of
+   neighbouring FFT peaks, and if you resynthesise those as steady tones they **beat**
+   against each other — an amplitude flutter that sounds choppy/buzzy. Keeping only the
+   strongest peak per ~60 Hz band removes the beating while preserving the timbre.
+4. Playback is a **bank of steady sine oscillators** (one per partial, via a sine LUT).
+   There is no loop and no time-domain playback, so the sustain never repeats, drifts,
+   or seams — it just holds.
+
+The FFT runs only once, at capture; the per-sample cost is the oscillator bank.
+
+### 3. Layer stack
+Up to **six** layers play summed (`FreezeEngine.hpp`). In Latch mode each Freeze press
+captures and pushes a new layer; **Clear** tap removes the most-recent one (the plugin
+measures how long Clear is held to tell *tap* from *hold = wipe all*). Each layer has its
+own gain envelope:
+
+- **Speed** sets the fade-in (on add) and fade-out (on remove/clear) time.
+- **Gliss** gives a new layer a one-shot **pitch glide**: its oscillator frequencies
+  start a fraction below pitch and ramp up (a portamento swoop). 0 = arrive at pitch.
+- **Layer** scales the level a new layer enters at.
+
+### 4. Movement (per layer)
+`Modulator.hpp` adds life so the freeze isn't sterile. Each layer gets its own modulator:
+
+- **Amplitude breathing** — the sum of two incommensurate parabolic-sine LFOs, so it
+  drifts organically rather than ticking like a metronome (up to ±60 % at full depth).
+- **Pitch shimmer** — a third, slower LFO detunes the partials by at most ≈ ±10 cents.
+- Each layer seeds its own phases and a small (±6 %) rate offset, so **stacked layers
+  shimmer independently**.
+- **Depth = 0 returns exactly unity** — a true bypass, so with Movement off the freeze is
+  bit-identical to the static resynthesis.
+
+### 5. Tone, mix, and safety
+The summed layers pass through a one-pole **high-cut** (`ToneFilter.hpp`), then a `tanh`
+**soft-limiter** so stacking many layers can't hard-clip. The wet signal is mixed with the
+dry input (**Dry**/**Effect**), and **flush-to-zero** is enabled on the audio thread so
+decaying denormal floats can't cause CPU spikes / xruns at small buffer sizes.
+
+---
+
+## Compared to a spectral (phase-vocoder) freeze
+
+A common way to build a freeze — e.g. [MrFreeze](https://github.com/romi1502/MrFreeze) — is
+a **phase-vocoder spectral freeze**: capture one FFT frame's *full* magnitude spectrum, then
+resynthesise by repeatedly **inverse-FFTing it with overlap-add**, advancing each bin's phase
+per hop so successive frames stay coherent. Boreas takes the **sinusoidal-model** route
+instead — it keeps only the spectral *peaks* as discrete partials and plays them on an
+oscillator bank. Same starting point (FFT-analyse one moment), opposite philosophies:
+
+| | Phase-vocoder freeze (e.g. MrFreeze) | Boreas (sinusoidal model) |
+|---|---|---|
+| What's frozen | the **full** magnitude spectrum (every bin) | ~120 **discrete peaks** |
+| Partial frequency | quantised to the FFT **bin grid** | **sub-bin** (parabolic interpolation) |
+| Resynthesis | inverse-FFT + overlap-add, **every hop** | **oscillator bank**, per sample |
+| Steady-state CPU | an IFFT per hop, continuously | cheap oscillators (FFT runs once, at capture) |
+| Smeared / close partials | kept (all bins) | **merged** (≥ 60 Hz apart) |
+
+The practical upshot: the spectral approach reproduces the timbre *literally* (noise and all)
+but carries the phase-vocoder's faint "glassy/watery" shimmer and an ongoing FFT cost. Boreas
+distils the sound to its strongest partials at their true frequencies — losing some fine
+texture, but giving a dead-steady, beating-free tone for almost no steady-state cost. The
+≥ 60 Hz peak-merging is the deliberate fix for the inter-partial beating a full-spectrum
+freeze leaves in.
+
+---
+
+## Code architecture
+
+The DSP is header-only and framework-independent, so it can be unit-tested natively
+without DPF or a host:
+
+| File | Responsibility |
+|---|---|
+| `dsp/Constants.hpp` | Sample-rate-aware mappings (window length, speed/gliss/move-rate curves). |
+| `dsp/CircularBuffer.hpp` | The input ring buffer + windowed capture. |
+| `dsp/FFT.hpp` | Radix-2 iterative FFT. |
+| `dsp/SinusoidalModel.hpp` | FFT peak analysis + steady oscillator-bank synthesis. |
+| `dsp/Modulator.hpp` | Per-layer Movement LFO (breathing + shimmer). |
+| `dsp/ToneFilter.hpp` | One-pole output high-cut. |
+| `dsp/FreezeEngine.hpp` | Orchestrates capture, the layer stack, fades, gliss, movement, tone. |
+| `BoreasPlugin.cpp` | DPF plugin: parameters, footswitch edge/hold logic, dry/wet mix. |
+| `modgui/` | The MOD pedalboard GUI (HTML/CSS/JS + knob sprite). |
+
+### Tests
+A dependency-free `g++` harness lives in `tests/` (one `test_*.cpp` per component):
 
 ```bash
-git clone --recurse-submodules https://github.com/YOU/yourplugin.git
-cd yourplugin
-make                              # build bin/myplugin.lv2
-./install.sh                      # install into MOD Desktop's plugin dir
+make -C tests test     # build and run all DSP unit tests
 ```
 
-Restart MOD Desktop and the plugin appears under brand **"myplugin"** as
-**"My Plugin"**.
+---
 
-## Renaming
+## Building & installing
 
-Change the four variables at the top of the [`Makefile`](Makefile):
-
-```makefile
-PLUGIN          := myplugin
-BRAND           := myplugin
-LABEL           := My Plugin
-PLUGIN_URI_BASE := http://myplugin.local/plugins
+```bash
+git clone --recurse-submodules <repo-url> boreas
+cd boreas
+make                               # build bin/boreas.lv2 (Linux x86_64)
+MOD_DESKTOP_PLUGINS=/path/to/mod-desktop/plugins ./install.sh
 ```
 
-Then rename:
-- `plugins/MyPlugin/` → `plugins/YourPlugin/`
-- `MyPluginPlugin.cpp` → `YourPluginPlugin.cpp` (update `FILES_DSP` in
-  the inner Makefile, the class name, and the `Makefile -C` path)
-- `modgui/icon-myplugin.html`, `stylesheet-myplugin.css`,
-  `script-myplugin.js`, `knobs/myplugin-knob.png`
-- All `myplugin` strings in `modgui.ttl` and `DistrhoPluginInfo.h`
-- All `MYPLUGIN_BETA` / `MyPlugin` / etc. macro references
+Then restart MOD Desktop so it rescans plugins; Boreas appears under brand **Stefan**.
 
-It's mechanical — `grep -ri myplugin` will show every spot. Reading
-[`INSTRUCTIONS.md`](INSTRUCTIONS.md) first will save you time if you delegate the
-rename to an LLM.
+| Command | What it does |
+|---|---|
+| `make` | Build `bin/boreas.lv2` (Linux x86_64) |
+| `make beta` | Build the side-by-side `boreas-beta.lv2` variant (distinct URI/id) |
+| `./install.sh` | Install into MOD Desktop's user-plugin dir |
+| `make -C tests test` | Run the DSP unit tests |
+| `make dwarf` | Cross-compile (Docker) + deploy to a connected MOD Dwarf |
+| `make release version=x.y.z` | Build, package, tag, push, and create a GitHub release |
+| `make clean` | Delete `bin/`, `build/` |
 
-## Build targets
+The identity (name/brand/URI) lives in the top-level [`Makefile`](Makefile) and
+[`DistrhoPluginInfo.h`](plugins/Boreas/DistrhoPluginInfo.h).
 
-| Command                       | What it does |
-|-------------------------------|--------------|
-| `make`                        | Build `bin/myplugin.lv2` (Linux x86_64) |
-| `make beta`                   | Build `bin/myplugin-beta.lv2` (side-by-side variant) |
-| `./install.sh`                | Copy to MOD Desktop's user-plugin dir |
-| `BETA=1 ./install.sh`         | Install the beta variant |
-| `make install`                | Copy to `/usr/lib/lv2/` (use `sudo`) |
-| `make dwarf-image`            | One-time: build aarch64 cross-toolchain image (~30-60 min) |
-| `make dwarf-build`            | Cross-compile → `build/dwarf/myplugin.lv2` (~10 s) |
-| `make dwarf-deploy`           | scp the bundle to a connected Dwarf + restart services |
-| `make dwarf`                  | Cross-build + deploy in one step |
-| `make release version=0.0.1`  | Build, package, tag, push, and `gh release create` with both bundles attached |
-| `make clean`                  | Delete `bin/`, `build/` |
+### modgui notes
+The pedal GUI is a custom MOD modgui. A couple of MOD-specific gotchas are documented in
+[`INSTRUCTIONS.md`](INSTRUCTIONS.md): the scanner requires a `screenshot`/`thumbnail` (it
+segfaults otherwise), and custom knobs need a film-sprite shipped under `modgui/knobs/`.
+The `screenshot-boreas.png` / `thumbnail-boreas.png` are rendered from the icon/stylesheet
+via headless Chrome — re-render them if the UI changes.
 
-The `dwarf-*` targets need Docker. `make release` needs the `gh` CLI
-authenticated to the GitHub repo.
-
-## Project layout
-
-```
-.
-├── plugins/MyPlugin/             — the DPF plugin (C++ DSP + modgui)
-│   ├── MyPluginPlugin.cpp        — DSP code; replace with your plugin
-│   ├── DistrhoPluginInfo.h       — LV2 identity (stable + beta)
-│   ├── modgui/                   — MOD pedalboard GUI (HTML/CSS/JS/sprite)
-│   ├── modgui.ttl                — MOD GUI declaration
-│   └── Makefile                  — DPF inner build glue (BETA=1 retags here)
-├── dpf/                          — DISTRHO Plugin Framework (git submodule)
-├── mod-build/                    — Self-contained Dwarf cross-build setup
-│   ├── Dockerfile                — vendored MPB Dockerfile, builds aarch64 toolchain
-│   ├── build-plugin.sh           — runs inside the container; native TTL + aarch64 .so
-│   └── README.md                 — Dwarf cross-build walkthrough
-├── Makefile                      — top-level build + install + Dwarf + release
-├── install.sh                    — MOD Desktop installer
-├── README.md                     — this file
-└── INSTRUCTIONS.md                     — instructions for an LLM continuing this work
-```
-
-## Why local releases (not CI)?
-
-The `make release` target builds both bundles **on your machine** and
-uploads them via `gh release create`. The Dwarf cross-toolchain takes
-~30–60 min to assemble from scratch and is hard to cache reliably on a
-fresh GitHub Actions runner. Locally the image is already there and
-`make dwarf-build` is ~10 s, so doing the publish from the developer
-machine is faster and simpler than wiring up CI with image caching.
+---
 
 ## Acknowledgements
-
-- [DISTRHO Plugin Framework (DPF)](https://github.com/DISTRHO/DPF) — the
-  cross-platform LV2/VST/CLAP framework powering the plugin
-- [MOD Audio](https://mod.audio) — for the Dwarf, MOD Desktop,
-  mod-plugin-builder, and the modgui design
+- [DISTRHO Plugin Framework (DPF)](https://github.com/DISTRHO/DPF) — the LV2/VST/CLAP framework.
+- [MOD Audio](https://mod.audio) — the Dwarf, MOD Desktop, mod-plugin-builder, and the modgui design.
+- Inspired by the EHX Deep Freeze and the family of freeze / infinite-sustain pedals.
 
 ## License
-
-This template is released under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)
-— effectively public domain, no attribution required. Fork it, rename
-it, use it however you want.
-
-DPF is ISC-licensed (see [`dpf/LICENSE`](dpf/LICENSE)).
+Plugin code is ISC-licensed. DPF is ISC-licensed (see [`dpf/LICENSE`](dpf/LICENSE)).

@@ -4,6 +4,10 @@
 namespace boreas {
 
 constexpr double kMaxSampleRate = 96000.0;
+// Input ring length. Only the most-recent kWindowSec is used today; the extra
+// headroom is intentional reserve for a future Lookback control.
+// TODO(lookback): expose lookback as an LV2 port; the ring + copyWindow already
+// support it (see kDefaultLookbackSamples). Until then ~850 ms here is unused.
 constexpr double kRingSeconds   = 1.0;
 constexpr double kWindowSec     = 0.15;
 constexpr double kSpeedMinSec   = 0.005;   // at speed = 1.0 (fast)
@@ -13,8 +17,10 @@ constexpr double kMoveRateMinHz = 0.05;    // Movement LFO at rate = 0.0 (slow b
 constexpr double kMoveRateMaxHz = 8.0;     // at rate = 1.0 (fast tremolo)
 
 // Capture offset behind the write head, in samples. Default 0 = "freeze now".
-// Kept as a single constant so it can later be promoted to an LV2 port for
-// A/B testing transient-avoidance lookback without a DSP rewrite.
+// TODO(lookback): promote to an LV2 port so the user can freeze a window from
+// *before* the stomp (dodge the attack transient / rewind). FreezeEngine already
+// has setLookback() and CircularBuffer::copyWindow() already takes the offset —
+// it just needs a parameter wired up. Currently always 0.
 constexpr int kDefaultLookbackSamples = 0;
 
 // Allocation ceilings (sized once; run() never allocates).
