@@ -1,5 +1,7 @@
 # Boreas
 
+![Boreas — freeze / infinite-sustain pedal](plugins/Boreas/modgui/screenshot-boreas.png)
+
 **Freeze / infinite-sustain pedal for [MOD Desktop](https://mod.audio/desktop/) and
 [MOD Dwarf](https://mod.audio/dwarf/).** Capture a moment of sound and hold it as a
 smooth, endless drone — stack layers, slide them in by pitch, shape the tone, and add
