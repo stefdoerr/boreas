@@ -10,7 +10,8 @@
         modgui:javascript         <modgui/script-boreas.js> ;
         # screenshot + thumbnail are REQUIRED by mod-ui's scanner: MOD Desktop's
         # get_all_plugins() segfaults on an uninitialised char* if a modgui omits
-        # them. Replace these placeholder PNGs with a real capture from MOD-UI.
+        # them. These PNGs are rendered from the icon/stylesheet via headless
+        # Chrome (knobs at default values); re-run that render if the UI changes.
         modgui:screenshot         <modgui/screenshot-boreas.png> ;
         modgui:thumbnail          <modgui/thumbnail-boreas.png> ;
         modgui:brand "Stefan" ;
