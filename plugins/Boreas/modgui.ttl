@@ -23,7 +23,7 @@
         modgui:port
             [ lv2:symbol "footswitch" ; lv2:name "Freeze" ] ,
             [ lv2:symbol "clear" ;      lv2:name "Clear" ] ,
-            [ lv2:symbol "mode" ;       lv2:name "Mode" ] ,
+            [ lv2:symbol "hold" ;       lv2:name "Hold" ] ,
             [ lv2:symbol "speed" ;      lv2:name "Speed" ] ,
             [ lv2:symbol "layer" ;      lv2:name "Layer" ] ,
             [ lv2:symbol "gliss" ;      lv2:name "Gliss" ] ,

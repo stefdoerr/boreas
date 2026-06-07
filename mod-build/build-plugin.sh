@@ -3,8 +3,9 @@
 #
 # Invoked by `make dwarf-build`. The host passes us:
 #   /src   — the source tree, mounted read-only
-#   /out   — host-side output dir; we drop <plugin>.lv2 here
+#   /out   — host-side output dir; we drop <bundle>.lv2 here
 #   $PLUGIN — plugin name (matches the PLUGIN var in the top-level Makefile)
+#   $BETA   — "1" to build the side-by-side beta variant (optional)
 #
 # Pipeline:
 #   1. Stage the source into a writable scratch dir (rsync from /src).
@@ -32,6 +33,19 @@ if [ -z "${PLUGIN:-}" ]; then
     exit 1
 fi
 
+# BETA=1 (passed through from the top-level Makefile) builds the side-by-side
+# beta variant: distinct bundle name / URI / unique-id, same source. Lets us A/B
+# a work-in-progress against the stable plugin on the same device. The bundle and
+# .so are named <plugin>-beta; passing BETA=1 to make propagates the BOREAS_BETA
+# macro and renames the build.
+if [ "${BETA:-}" = "1" ]; then
+    BUNDLE="${PLUGIN}-beta"
+    MAKE_BETA="BETA=1"
+else
+    BUNDLE="${PLUGIN}"
+    MAKE_BETA=""
+fi
+
 TOOLCHAIN_BIN=/root/mod-workdir/moddwarf-new/host/usr/bin
 TOOL_PREFIX=aarch64-modaudio-linux-gnu
 
@@ -41,7 +55,7 @@ if [ ! -x "$TOOLCHAIN_BIN/${TOOL_PREFIX}-gcc" ]; then
     exit 1
 fi
 
-WORK=/work/$PLUGIN
+WORK=/work/$BUNDLE
 rm -rf "$WORK"
 mkdir -p "$WORK"
 # rsync gives us a writable copy without touching the read-only mount.
@@ -59,35 +73,35 @@ if [ -z "$PLUGIN_DIR" ]; then
 fi
 
 echo "==> [1/3] Native build (for .ttl metadata + modgui assets)"
-make -s all
+make -s all ${MAKE_BETA}
 # Stash the populated bundle (.ttl + modgui assets). DPF's clean between
 # the native and cross builds wipes bin/, so we have to set this aside.
-BUNDLE_STASH=/tmp/${PLUGIN}-bundle-stash
+BUNDLE_STASH=/tmp/${BUNDLE}-bundle-stash
 rm -rf "$BUNDLE_STASH"
-cp -rL "bin/${PLUGIN}.lv2" "$BUNDLE_STASH"
+cp -rL "bin/${BUNDLE}.lv2" "$BUNDLE_STASH"
 
-echo "==> [2/3] Cross-compiling ${PLUGIN}.so for aarch64"
-make -s -C "$PLUGIN_DIR" clean
-make -s -C "$PLUGIN_DIR" \
+echo "==> [2/3] Cross-compiling ${BUNDLE}.so for aarch64"
+make -s -C "$PLUGIN_DIR" clean ${MAKE_BETA}
+make -s -C "$PLUGIN_DIR" ${MAKE_BETA} \
     CC="$TOOLCHAIN_BIN/${TOOL_PREFIX}-gcc" \
     CXX="$TOOLCHAIN_BIN/${TOOL_PREFIX}-g++" \
     AR="$TOOLCHAIN_BIN/${TOOL_PREFIX}-ar" \
     LD="$TOOLCHAIN_BIN/${TOOL_PREFIX}-ld" \
     STRIP="$TOOLCHAIN_BIN/${TOOL_PREFIX}-strip" \
     NOOPT=false
-"$TOOLCHAIN_BIN/${TOOL_PREFIX}-strip" "bin/${PLUGIN}.lv2/${PLUGIN}.so"
+"$TOOLCHAIN_BIN/${TOOL_PREFIX}-strip" "bin/${BUNDLE}.lv2/${BUNDLE}.so"
 
-if ! file "bin/${PLUGIN}.lv2/${PLUGIN}.so" | grep -q 'ARM aarch64'; then
+if ! file "bin/${BUNDLE}.lv2/${BUNDLE}.so" | grep -q 'ARM aarch64'; then
     echo "build-plugin.sh: cross-compile did not produce an aarch64 binary." >&2
-    file "bin/${PLUGIN}.lv2/${PLUGIN}.so" >&2
+    file "bin/${BUNDLE}.lv2/${BUNDLE}.so" >&2
     exit 1
 fi
 
-echo "==> [3/3] Publishing bundle to /out/${PLUGIN}.lv2"
+echo "==> [3/3] Publishing bundle to /out/${BUNDLE}.lv2"
 # Use the stashed bundle (has the .ttl + modgui) and overlay the aarch64 .so
-cp -f "bin/${PLUGIN}.lv2/${PLUGIN}.so" "$BUNDLE_STASH/${PLUGIN}.so"
-rm -rf "/out/${PLUGIN}.lv2"
-cp -rL "$BUNDLE_STASH" "/out/${PLUGIN}.lv2"
+cp -f "bin/${BUNDLE}.lv2/${BUNDLE}.so" "$BUNDLE_STASH/${BUNDLE}.so"
+rm -rf "/out/${BUNDLE}.lv2"
+cp -rL "$BUNDLE_STASH" "/out/${BUNDLE}.lv2"
 
 # Container runs as root; chown the output back to the host user so it's
 # editable / deletable from outside Docker.
@@ -95,4 +109,4 @@ if [ -n "${HOST_UID:-}" ] && [ -n "${HOST_GID:-}" ]; then
     chown -R "$HOST_UID:$HOST_GID" /out
 fi
 
-echo "==> Done. $(file -b /out/${PLUGIN}.lv2/${PLUGIN}.so)"
+echo "==> Done. $(file -b /out/${BUNDLE}.lv2/${BUNDLE}.so)"

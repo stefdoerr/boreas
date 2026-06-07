@@ -16,21 +16,29 @@ with no loop seam, no choppiness, and no buzz.
 
 ## Controls
 
-Two footswitches and a row of knobs (plus a Mode selector):
+**Three footswitches** and a row of knobs:
 
-| Control | What it does |
+| Footswitch | What it does |
 |---|---|
-| **Freeze** (footswitch) | Capture the current sound and start sustaining it. In **Latch** mode each press **stacks another layer**; in **Moment** mode it sustains only while held. |
-| **Clear** (footswitch) | **Tap** = remove the most-recent layer; **hold (≥ 0.4 s)** = wipe all layers. |
-| **Mode** | **Moment** (freeze only while Freeze is held) or **Latch** (freeze stays; stack layers). |
+| **Freeze** | Capture the current sound and sustain it. Each press **stacks another layer** (up to six). |
+| **Hold** | **Momentary** freeze — sustains *only while held*, and thaws on release. Good for quick swells without leaving a layer behind. |
+| **Clear** | Each press **removes the most-recent layer**. |
+
+| Knob | What it does |
+|---|---|
 | **Speed** | Per-layer **volume** fade in/out time — from ~5 ms (instant) to ~4 s (slow swell). |
 | **Layer** | Level each newly-stacked layer comes in at. |
 | **Gliss** | **Pitch** slide-in (portamento): a new layer starts below pitch and glides up. 0 = no slide; max ≈ one octave over ~2 s. |
 | **Tone** | Output high-cut. ~500 Hz (dark) → ~18 kHz (open); the default (~2 kHz) tames frozen high-frequency hiss. |
-| **Rate** / **Depth** | **Movement** LFO — organic amplitude breathing + a subtle pitch shimmer. Rate ≈ 0.05–8 Hz. **Depth = 0 is off** (the freeze is then perfectly static). |
+| **Move Rate** / **Move Depth** | **Movement** LFO — organic amplitude breathing + a subtle pitch shimmer. Rate ≈ 0.05–8 Hz. **Depth = 0 is off** (the freeze is then perfectly static). |
 | **Dry** / **Effect** | Output mix of the dry input and the frozen signal. |
 
-Up to **six layers** can be stacked.
+Up to **six layers** can be stacked; the total number of live partials across all layers
+is capped (~96) so CPU stays bounded on the Dwarf no matter how many you stack.
+
+*All three footswitches are momentary: **Freeze** and **Clear** fire once per press
+(triggers), while **Hold** stays active only while pressed. The LV2 port-property
+details are in [`INSTRUCTIONS.md`](INSTRUCTIONS.md).*
 
 ---
 
@@ -63,23 +71,25 @@ Each frozen layer is built by a **sinusoidal model** (`SinusoidalModel.hpp`):
 1. The 150 ms window is **Hann-windowed** and run through an **8192-point FFT**.
 2. **Spectral peaks** are picked (local maxima above −60 dB) and refined to sub-bin
    accuracy by **parabolic interpolation**, giving each partial a precise
-   *frequency, amplitude, and phase*. Up to ~120 partials are kept.
+   *frequency, amplitude, and phase*. Up to ~96 partials are kept.
 3. A **minimum 60 Hz separation** is enforced between kept partials. This is the key to
    the smooth sound: a real recording smears each harmonic into a little cluster of
    neighbouring FFT peaks, and if you resynthesise those as steady tones they **beat**
    against each other — an amplitude flutter that sounds choppy/buzzy. Keeping only the
    strongest peak per ~60 Hz band removes the beating while preserving the timbre.
-4. Playback is a **bank of steady sine oscillators** (one per partial, via a sine LUT).
+4. Playback is a **bank of steady sine oscillators** (one per partial, via a sine LUT
+   driven by a fixed-point phase accumulator — cheap on the Dwarf's in-order CPU).
    There is no loop and no time-domain playback, so the sustain never repeats, drifts,
    or seams — it just holds.
 
 The FFT runs only once, at capture; the per-sample cost is the oscillator bank.
 
 ### 3. Layer stack
-Up to **six** layers play summed (`FreezeEngine.hpp`). In Latch mode each Freeze press
-captures and pushes a new layer; **Clear** tap removes the most-recent one (the plugin
-measures how long Clear is held to tell *tap* from *hold = wipe all*). Each layer has its
-own gain envelope:
+Up to **six** layers play summed (`FreezeEngine.hpp`). Each **Freeze** press captures and
+pushes a new layer; **Clear** removes the most-recent one; **Hold** is a momentary
+footswitch that sustains a freeze only while it's held. The total live oscillator count
+across all layers is capped (~96) so steady-state CPU stays bounded on the Dwarf. Each
+layer has its own gain envelope:
 
 - **Speed** sets the fade-in (on add) and fade-out (on remove/clear) time.
 - **Gliss** gives a new layer a one-shot **pitch glide**: its oscillator frequencies
@@ -116,7 +126,7 @@ oscillator bank. Same starting point (FFT-analyse one moment), opposite philosop
 
 | | Phase-vocoder freeze (e.g. MrFreeze) | Boreas (sinusoidal model) |
 |---|---|---|
-| What's frozen | the **full** magnitude spectrum (every bin) | ~120 **discrete peaks** |
+| What's frozen | the **full** magnitude spectrum (every bin) | ~96 **discrete peaks** |
 | Partial frequency | quantised to the FFT **bin grid** | **sub-bin** (parabolic interpolation) |
 | Resynthesis | inverse-FFT + overlap-add, **every hop** | **oscillator bank**, per sample |
 | Steady-state CPU | an IFFT per hop, continuously | cheap oscillators (FFT runs once, at capture) |

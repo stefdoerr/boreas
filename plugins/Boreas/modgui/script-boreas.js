@@ -1,21 +1,13 @@
 function (event, funcs) {
 
-    var MODE_VALUES = ['moment', 'latch'];   // index matches the C++ enum order
-
     if (event.type === 'start') {
         var icon = event.icon;
 
-        // Mode dropdown -> integer enum port.
-        icon.find('.boreas-mode-select').on('change', function () {
-            if (icon.data('suppress-emit')) return;
-            funcs.set_port_value('mode', MODE_VALUES.indexOf(this.value));
-        });
-
-        // Momentary buttons: port = 1 while pressed, 0 on release. MOD reads
-        // control ports once per audio block, so a fast tap can collapse to just
-        // "0" and the rising edge is missed -- so enforce a minimum 90 ms hold.
-        // Clear's press DURATION matters (plugin: tap = remove last layer, hold
-        // >= 0.4s = wipe all), so we follow the real release, never auto-release.
+        // Momentary footswitch buttons: port = 1 while pressed, 0 on release. MOD
+        // reads control ports once per audio block, so a fast tap can collapse to
+        // just "0" and the rising edge is missed -- enforce a 90 ms minimum hold.
+        // Press DURATION matters (Hold sustains while held; Clear tap = remove last
+        // layer, hold >= 0.4s = wipe all), so we follow the real release.
         var HOLD = 90;  // ms minimum
         function momentary(sel, sym) {
             var el = icon.find(sel), downAt = 0;
@@ -30,18 +22,8 @@ function (event, funcs) {
             });
         }
         momentary('.boreas-freeze', 'footswitch');
-        momentary('.boreas-clear', 'clear');
-        return;
-    }
-
-    if (event.type === 'change') {
-        // Keep the Mode dropdown in sync with preset recall / automation.
-        var icon2 = event.icon;
-        if (event.symbol === 'mode') {
-            icon2.data('suppress-emit', true);
-            icon2.find('.boreas-mode-select').val(MODE_VALUES[Math.round(event.value)]);
-            icon2.data('suppress-emit', false);
-        }
+        momentary('.boreas-hold',   'hold');
+        momentary('.boreas-clear',  'clear');
         return;
     }
 }

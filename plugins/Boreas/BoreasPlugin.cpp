@@ -35,7 +35,7 @@ public:
     enum ParamIndex {
         kParamFootswitch = 0,
         kParamClear,
-        kParamMode,
+        kParamHold,
         kParamSpeed,
         kParamLayer,
         kParamGliss,
@@ -44,6 +44,11 @@ public:
         kParamTone,
         kParamMoveRate,
         kParamMoveDepth,
+        // Deprecated ports, kept HIDDEN for backward-compatibility: a pedalboard
+        // saved with an older Boreas references these symbols, and mod-ui KeyErrors
+        // if a saved port symbol is no longer declared. The DSP ignores them.
+        kParamMode,      // replaced by the Hold footswitch
+        kParamMethod,    // removed when Boreas went Sinusoidal-only
         kNumParams
     };
 
@@ -80,27 +85,30 @@ protected:
     void initParameter(uint32_t index, Parameter& parameter) override {
         switch (index) {
         case kParamFootswitch:
-            parameter.hints  = kParameterIsAutomatable | kParameterIsBoolean | kParameterIsInteger;
+            // Trigger (pprops:trigger): MOD addresses a hardware footswitch as a
+            // momentary pulse (press = on for one block, auto-off) instead of a
+            // latching toggle, so every press fires a freeze. (kParameterIsTrigger
+            // includes kParameterIsBoolean.)
+            parameter.hints  = kParameterIsAutomatable | kParameterIsTrigger | kParameterIsInteger;
             parameter.name   = "Freeze";  parameter.symbol = "footswitch";
             parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.0f;
             break;
         case kParamClear:
-            parameter.hints  = kParameterIsAutomatable | kParameterIsBoolean | kParameterIsInteger;
+            // Trigger, exactly like Freeze: each press removes the most-recent layer.
+            // (A momentary Clear made the on-screen button sticky and the tap-vs-hold
+            // timing fiddly; a clean pulse per press is what's wanted.)
+            parameter.hints  = kParameterIsAutomatable | kParameterIsTrigger | kParameterIsInteger;
             parameter.name   = "Clear";   parameter.symbol = "clear";
             parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.0f;
             break;
-        case kParamMode: {
-            parameter.hints  = kParameterIsAutomatable | kParameterIsInteger;
-            parameter.name   = "Mode";    parameter.symbol = "mode";
-            parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 1.0f;
-            parameter.enumValues.count = 2;
-            parameter.enumValues.restrictedMode = true;
-            ParameterEnumerationValue* const ev = new ParameterEnumerationValue[2];
-            ev[0].value = 0.0f; ev[0].label = "Moment";
-            ev[1].value = 1.0f; ev[1].label = "Latch";
-            parameter.enumValues.values = ev;
+        case kParamHold:
+            // Momentary "hold to freeze" (mod:preferMomentaryOnByDefault, TTL-patched):
+            // value is 1 while the footswitch is held; the freeze sustains only while
+            // held and thaws on release.
+            parameter.hints  = kParameterIsAutomatable | kParameterIsBoolean | kParameterIsInteger;
+            parameter.name   = "Hold";    parameter.symbol = "hold";
+            parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.0f;
             break;
-        }
         case kParamSpeed:
             parameter.hints  = kParameterIsAutomatable;
             parameter.name   = "Speed";   parameter.symbol = "speed";
@@ -141,6 +149,17 @@ protected:
             parameter.name   = "Move Depth"; parameter.symbol = "move_depth";
             parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.0f;
             break;
+        // Deprecated, hidden, ignored — see the enum note (pedalboard backward-compat).
+        case kParamMode:
+            parameter.hints  = kParameterIsAutomatable | kParameterIsInteger | kParameterIsHidden;
+            parameter.name   = "Mode (deprecated)";   parameter.symbol = "mode";
+            parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 1.0f;
+            break;
+        case kParamMethod:
+            parameter.hints  = kParameterIsAutomatable | kParameterIsInteger | kParameterIsHidden;
+            parameter.name   = "Method (deprecated)"; parameter.symbol = "method";
+            parameter.ranges.min = 0.0f; parameter.ranges.max = 1.0f; parameter.ranges.def = 0.0f;
+            break;
         }
     }
 
@@ -148,7 +167,7 @@ protected:
         switch (index) {
         case kParamFootswitch: return fFootswitch;
         case kParamClear:      return fClear;
-        case kParamMode:       return fMode;
+        case kParamHold:       return fHold;
         case kParamSpeed:      return fSpeed;
         case kParamLayer:      return fLayer;
         case kParamGliss:      return fGliss;
@@ -157,6 +176,8 @@ protected:
         case kParamTone:       return fTone;
         case kParamMoveRate:   return fMoveRate;
         case kParamMoveDepth:  return fMoveDepth;
+        case kParamMode:       return fModeDeprecated_;
+        case kParamMethod:     return fMethodDeprecated_;
         }
         return 0.0f;
     }
@@ -165,7 +186,7 @@ protected:
         switch (index) {
         case kParamFootswitch: fFootswitch = value; break;
         case kParamClear:      fClear = value;      break;
-        case kParamMode:       fMode = value;       break;
+        case kParamHold:       fHold = value;       break;
         case kParamSpeed:      fSpeed = value;      break;
         case kParamLayer:      fLayer = value;      break;
         case kParamGliss:      fGliss = value;      break;
@@ -174,14 +195,15 @@ protected:
         case kParamTone:       fTone = value;       break;
         case kParamMoveRate:   fMoveRate = value;   break;
         case kParamMoveDepth:  fMoveDepth = value;  break;
+        case kParamMode:       fModeDeprecated_ = value;   break;   // ignored
+        case kParamMethod:     fMethodDeprecated_ = value; break;   // ignored
         }
     }
 
     void activate() override {
         engine_.prepare(getSampleRate());
         updateSmoothing(getSampleRate());
-        fsPrev_ = false; clrPrev_ = false; clrWiped_ = false; clrHeldFrames_ = 0;
-        clrHoldThresh_ = (uint32_t)(0.4 * getSampleRate());   // hold >= 0.4s wipes all layers
+        fsPrev_ = false; hdPrev_ = false; clrPrev_ = false;
         dryS_ = fDryVol; effS_ = fEffectVol;
     }
 
@@ -196,7 +218,6 @@ protected:
         const float* const in  = inputs[0];
         float* const       out = outputs[0];
 
-        engine_.setMode((int)(fMode + 0.5f));
         engine_.setTone(fTone);
         engine_.setSpeed(fSpeed);
         engine_.setLayer(fLayer);
@@ -204,22 +225,24 @@ protected:
         engine_.setMoveRate(fMoveRate);
         engine_.setMoveDepth(fMoveDepth);
 
+        // Freeze (trigger): each press stacks a layer. Ignore the release edge —
+        // the trigger's auto-off must not remove the layer just added.
         const bool fsNow = fFootswitch >= 0.5f;
         if (fsNow && !fsPrev_) engine_.onFreezePress();
-        if (!fsNow && fsPrev_) engine_.onFreezeRelease();
         fsPrev_ = fsNow;
 
-        // Clear: a tap (released before the hold threshold) removes the most
-        // recent layer; a hold (>= threshold) wipes all layers.
+        // Hold (momentary): freeze sustains only while held, thaws on release.
+        const bool hdNow = fHold >= 0.5f;
+        if (hdNow && !hdPrev_) engine_.onFreezePress();
+        if (!hdNow && hdPrev_) engine_.onFreezeRelease();
+        hdPrev_ = hdNow;
+
+        // Clear (trigger): each press removes the most-recent layer.
         const bool clrNow = fClear >= 0.5f;
-        if (clrNow && !clrPrev_) { clrHeldFrames_ = 0; clrWiped_ = false; }
-        if (clrNow) {
-            clrHeldFrames_ += frames;
-            if (!clrWiped_ && clrHeldFrames_ >= clrHoldThresh_) { engine_.clearAllLayers(); clrWiped_ = true; }
-        } else if (clrPrev_ && !clrWiped_) {
-            engine_.removeLastLayer();
-        }
+        if (clrNow && !clrPrev_) engine_.removeLastLayer();
         clrPrev_ = clrNow;
+
+        engine_.tick();   // advance any in-progress freeze analysis (spread off this block)
 
         for (uint32_t f = 0; f < frames; ++f) {
             engine_.writeInput(in[f]);
@@ -235,14 +258,14 @@ private:
         smoothCoef_ = (float)(1.0 - std::exp(-1.0 / (fs * 0.005)));   // ~5 ms
     }
 
-    float fFootswitch = 0.0f, fClear = 0.0f, fMode = 1.0f;
+    float fFootswitch = 0.0f, fClear = 0.0f, fHold = 0.0f;
     float fSpeed = 0.2f, fLayer = 1.0f, fGliss = 0.0f;
     float fDryVol = 0.5f, fEffectVol = 0.5f;
     float fTone = 0.4f;     // high-cut: 1 = open, 0 = dark (~2 kHz default tames frozen-noise buzz)
     float fMoveRate = 0.3f, fMoveDepth = 0.0f;   // Movement LFO (depth 0 = off, bit-identical)
+    float fModeDeprecated_ = 1.0f, fMethodDeprecated_ = 0.0f;   // hidden, ignored (backward-compat)
 
-    bool     fsPrev_ = false, clrPrev_ = false, clrWiped_ = false;
-    uint32_t clrHeldFrames_ = 0, clrHoldThresh_ = 19200;   // ~0.4 s @ 48 kHz
+    bool     fsPrev_ = false, hdPrev_ = false, clrPrev_ = false;
     float dryS_ = 0.5f, effS_ = 0.5f, smoothCoef_ = 0.1f;
 
     boreas::FreezeEngine engine_;

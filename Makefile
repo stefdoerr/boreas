@@ -78,6 +78,12 @@ plugin:
 
 ttl: plugin dpf/utils/lv2_ttl_generator
 	@$(CURDIR)/dpf/utils/generate-ttl.sh
+	@# Momentary footswitches: DPF can't emit MOD-specific port properties, so
+	@# patch mod:preferMomentaryOnByDefault into the Hold and Clear ports here.
+	@# (generate-ttl.sh rewrites the TTL fresh each build, so this never stacks.)
+	@for sym in hold; do \
+		sed -i "/lv2:symbol \"$$sym\" ;/a\        lv2:portProperty mod:preferMomentaryOnByDefault ;" "$(BUNDLE)/$(BUNDLE_NAME).ttl"; \
+	done
 
 dpf/utils/lv2_ttl_generator:
 	$(MAKE) -C dpf/utils/lv2-ttl-generator
@@ -152,7 +158,7 @@ DWARF_HOST   ?= 192.168.51.1
 DWARF_USER   ?= root
 DWARF_LV2DIR ?= /root/.lv2
 
-DWARF_BUNDLE := build/dwarf/$(PLUGIN).lv2
+DWARF_BUNDLE := build/dwarf/$(BUNDLE_NAME).lv2
 
 dwarf-image:
 	docker build -t $(CROSS_IMAGE) mod-build/
@@ -166,6 +172,7 @@ dwarf-build:
 	docker run --rm \
 		-e HOST_UID=$$(id -u) -e HOST_GID=$$(id -g) \
 		-e PLUGIN=$(PLUGIN) \
+		-e BETA=$(BETA) \
 		-v "$(CURDIR):/src:ro" \
 		-v "$(CURDIR)/build/dwarf:/out" \
 		$(CROSS_IMAGE) \
