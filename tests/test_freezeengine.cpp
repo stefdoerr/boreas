@@ -76,11 +76,11 @@ static void test_hold_press_release() {   // Hold footswitch: press = freeze, re
     FreezeEngine e; e.prepare(48000.0);
     e.setSpeed(1.0); e.setLayer(1.0);
     writeSine(e, 220, 48000, 24000);
-    e.onFreezePress();
+    e.onHoldPress();
     settle(e);
     for (int i = 0; i < 500; ++i) e.process();
     CHECK(e.layerCount() == 1); CHECK(e.active());
-    e.onFreezeRelease();
+    e.onHoldRelease();
     CHECK(e.layerCount() == 0);
     for (int i = 0; i < 2000; ++i) e.process();
     CHECK(!e.active());                                   // faded out on release

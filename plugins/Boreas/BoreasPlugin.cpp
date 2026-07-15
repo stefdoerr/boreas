@@ -231,10 +231,11 @@ protected:
         if (fsNow && !fsPrev_) engine_.onFreezePress();
         fsPrev_ = fsNow;
 
-        // Hold (momentary): freeze sustains only while held, thaws on release.
+        // Hold (momentary): freeze sustains only while held; the release removes
+        // exactly the layer the press created (no-op if it was already cleared).
         const bool hdNow = fHold >= 0.5f;
-        if (hdNow && !hdPrev_) engine_.onFreezePress();
-        if (!hdNow && hdPrev_) engine_.onFreezeRelease();
+        if (hdNow && !hdPrev_) engine_.onHoldPress();
+        if (!hdNow && hdPrev_) engine_.onHoldRelease();
         hdPrev_ = hdNow;
 
         // Clear (trigger): each press removes the most-recent layer.
