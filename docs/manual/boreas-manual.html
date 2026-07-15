@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boreas User Manual</title>
+<style>
+/* ==========================================================================
+   Boreas beginner manual — print source.
+   Rendered to PDF with headless Chrome via `make manual` (A4).
+   Edit this file, never the PDF.
+   ========================================================================== */
+
+:root {
+    --navy:  #0e1522;   /* cover background — matches the pedal face   */
+    --navy2: #16233a;
+    --ice:   #7fb8d8;   /* glacial accent                              */
+    --ice-d: #3d7ea6;   /* darker ice for headings on white            */
+    --ink:   #232a33;   /* body text                                   */
+    --steel: #5a6b7d;   /* muted secondary text                        */
+    --line:  #d7e2ea;   /* hairlines / table borders                   */
+    --wash:  #eef4f9;   /* light panel background                      */
+}
+
+@page       { size: A4; margin: 18mm 16mm; }
+@page :first { margin: 0; }
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    font-size: 10pt;
+    line-height: 1.55;
+}
+
+/* ---- generic type ---- */
+
+h2 {
+    font-size: 17pt;
+    color: var(--ice-d);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--ice);
+    padding-bottom: 4px;
+    margin: 0 0 10px 0;
+    break-after: avoid;
+}
+h3 {
+    font-size: 11.5pt;
+    color: var(--ink);
+    margin: 14px 0 6px 0;
+    break-after: avoid;
+}
+p  { margin: 0 0 8px 0; }
+code, pre {
+    font-family: "DejaVu Sans Mono", "Liberation Mono", Menlo, Consolas, monospace;
+}
+code {
+    background: var(--wash);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 0 3px;
+    font-size: 8.5pt;
+}
+pre {
+    background: var(--wash);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--ice);
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 8pt;   /* keeps the longest install one-liner on a single line */
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    margin: 6px 0 10px 0;
+    break-inside: avoid;
+}
+
+section { break-before: page; }
+section.flow { break-before: auto; margin-top: 22px; }
+.pb { break-before: page; }
+
+/* ---- cover ---- */
+
+.cover {
+    width: 210mm;
+    height: 296mm;             /* 1mm shy of A4 so rounding can't spill a blank page */
+    background:
+        radial-gradient(ellipse at 30% 10%, rgba(127, 184, 216, 0.16), transparent 55%),
+        radial-gradient(ellipse at 85% 90%, rgba(61, 126, 166, 0.22), transparent 60%),
+        linear-gradient(160deg, var(--navy) 0%, var(--navy2) 60%, #0a1019 100%);
+    color: #e8f1f7;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20mm;
+}
+.cover .brand {
+    letter-spacing: 0.55em;
+    font-size: 10pt;
+    color: rgba(200, 224, 238, 0.65);
+    text-transform: uppercase;
+    margin-bottom: 4mm;
+}
+.cover h1 {
+    font-size: 46pt;
+    letter-spacing: 0.28em;
+    margin: 0 0 3mm 0.28em;    /* left inset balances the letter-spacing tail */
+    color: #eef6fb;
+    font-weight: 700;
+}
+.cover .tagline {
+    font-size: 13pt;
+    color: var(--ice);
+    letter-spacing: 0.06em;
+    margin-bottom: 14mm;
+}
+.cover img {
+    width: 120mm;
+    border-radius: 4mm;
+    box-shadow: 0 6mm 18mm rgba(0, 0, 0, 0.55);
+    margin-bottom: 16mm;
+}
+.cover .edition {
+    font-size: 9.5pt;
+    color: rgba(200, 224, 238, 0.55);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.cover .subtitle {
+    font-size: 12pt;
+    color: rgba(232, 241, 247, 0.9);
+    margin-bottom: 2mm;
+}
+
+/* ---- pedal image with numbered callout badges ---- */
+
+.pedal-map {
+    position: relative;
+    width: 118mm;
+    margin: 4mm auto 6mm auto;
+    break-inside: avoid;
+}
+.pedal-map img {
+    width: 100%;
+    display: block;
+    border-radius: 3mm;
+    box-shadow: 0 2mm 6mm rgba(14, 21, 34, 0.35);
+}
+.badge, .pedal-map .pin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ice-d);
+    color: #fff;
+    font-size: 7.5pt;
+    font-weight: 700;
+    line-height: 1;
+    flex: none;
+}
+.pedal-map .pin {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+}
+
+/* ---- control tables & knob cards ---- */
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 6px 0 12px 0;
+    break-inside: avoid;
+}
+th, td {
+    border: 1px solid var(--line);
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+th {
+    background: var(--wash);
+    color: var(--ice-d);
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+td.ctl { white-space: nowrap; font-weight: 700; }
+
+.knob-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 6px;
+}
+.knob {
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 7px 9px 5px 9px;
+    break-inside: avoid;
+}
+.knob h4 {
+    margin: 0 0 3px 0;
+    font-size: 10.5pt;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.knob p { font-size: 9.2pt; margin-bottom: 4px; }
+.knob ul {
+    margin: 0;
+    padding-left: 14px;
+    font-size: 8.8pt;
+    color: var(--steel);
+}
+.knob li { margin-bottom: 1px; }
+.knob li b { color: var(--ink); font-weight: 600; }
+
+/* ---- recipes ---- */
+
+.recipe {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--ice);
+    border-radius: 5px;
+    padding: 8px 11px;
+    margin-bottom: 9px;
+    break-inside: avoid;
+}
+.recipe h3 { margin: 0 0 4px 0; color: var(--ice-d); }
+.recipe .set {
+    font-size: 8.8pt;
+    color: var(--steel);
+    margin-bottom: 4px;
+}
+.recipe .set b { color: var(--ink); font-weight: 600; }
+.recipe p { font-size: 9.3pt; margin: 0; }
+
+/* ---- tips / faq ---- */
+
+.tips-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    margin-top: 4px;
+}
+.tip { break-inside: avoid; margin-bottom: 9px; }
+.tip h3 { margin: 0 0 2px 0; }
+.tip p  { font-size: 9.4pt; }
+
+dl.faq { margin: 6px 0; }
+dl.faq dt {
+    font-weight: 700;
+    margin-top: 9px;
+    break-after: avoid;
+}
+dl.faq dd {
+    margin: 1px 0 0 0;
+    font-size: 9.4pt;
+}
+dl.faq .qa { break-inside: avoid; }
+
+/* ---- misc ---- */
+
+.note {
+    background: var(--wash);
+    border-left: 3px solid var(--ice);
+    border-radius: 0 4px 4px 0;
+    padding: 6px 10px;
+    font-size: 9.3pt;
+    margin: 8px 0;
+    break-inside: avoid;
+}
+ol.steps { padding-left: 18px; margin: 4px 0 8px 0; }
+ol.steps li { margin-bottom: 5px; }
+a { color: var(--ice-d); text-decoration: none; }
+.credits {
+    margin-top: 14px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    font-size: 8.8pt;
+    color: var(--steel);
+}
+</style>
+</head>
+<body>
+
+<!-- ======================================================= page 1: cover -->
+<div class="cover">
+    <div class="brand">Stefan</div>
+    <h1>BOREAS</h1>
+    <div class="tagline">Hold a moment of sound forever.</div>
+    <img src="../../plugins/Boreas/modgui/screenshot-boreas.png" alt="The Boreas pedal">
+    <div class="subtitle">Freeze &amp; infinite-sustain pedal for MOD Desktop and MOD Dwarf</div>
+    <div class="edition">User Manual &middot; July 2026 edition</div>
+</div>
+
+<!-- ============================================ page 2: intro + quick start -->
+<section>
+    <h2>What Boreas does</h2>
+    <p>
+        Boreas is a <b>freeze pedal</b>. Play something — a note, a chord, any sound —
+        and stomp the switch: the sound you were making at that instant <b>holds</b>,
+        as a perfectly steady drone that sustains forever underneath whatever you play
+        next. It is like catching a moment of your sound in the air and keeping it there.
+    </p>
+    <p>
+        Freeze again and a second layer stacks on top of the first. Keep going — up to
+        <b>six layers</b> — and you can build a whole chord, a pad, or a wall of sound
+        one note at a time, then solo over it with your hands completely free.
+    </p>
+    <p>
+        The sustain is smooth because Boreas re-plays the <i>tone</i> of that moment,
+        not a tape loop — so there is no seam, wobble, or repeat. A frozen layer sounds
+        the same after a minute as it does after a second: still, calm, endless.
+    </p>
+    <div class="note">
+        <b>Good to know:</b> Boreas freezes whatever it hears at its input. Put it
+        <i>after</i> the effects you want captured in the freeze (drive, wah&nbsp;&hellip;)
+        and <i>before</i> big ambient effects like reverb and delay, so those can wash
+        over the frozen sound too.
+    </div>
+
+    <h2 style="margin-top:18px">Quick start</h2>
+    <ol class="steps">
+        <li><b>Add Boreas to your pedalboard.</b> In the MOD web interface, find it under
+            the brand <b>Stefan</b> and drag it into your signal chain.</li>
+        <li><b>Leave the knobs where they are.</b> The defaults are a good starting point.
+            Check that <b>DRY</b> and <b>EFFECT</b> are both around the middle.</li>
+        <li><b>Play a note or a chord — and let it ring.</b></li>
+        <li><b>While it is still sounding, press FREEZE.</b> The sound holds as a steady
+            drone. Take your hands off the instrument: it keeps going.</li>
+        <li><b>Play over it.</b> Press <b>FREEZE</b> again to stack another layer,
+            press <b>CLEAR</b> to remove the newest layer, or press and hold
+            <b>HOLD</b> for a freeze that lasts only as long as your foot is down.</li>
+    </ol>
+    <div class="note">
+        <b>The one trick to learn:</b> stomp <i>while the sound is ringing</i>, not as
+        you pick. Boreas captures the instant you press — freeze during silence and you
+        get a silent layer. Let the note bloom for a heartbeat, then freeze it.
+    </div>
+</section>
+
+<!-- ================================================== page 3: the controls -->
+<section>
+    <h2>The controls</h2>
+    <div class="pedal-map">
+        <img src="../../plugins/Boreas/modgui/screenshot-boreas.png" alt="Boreas control layout">
+        <span class="pin" style="left:24%; top:83%;">1</span>
+        <span class="pin" style="left:45%; top:83%;">2</span>
+        <span class="pin" style="left:59%; top:83%;">3</span>
+        <span class="pin" style="left:7%;  top:16%;">4</span>
+        <span class="pin" style="left:30%; top:16%;">5</span>
+        <span class="pin" style="left:53%; top:16%;">6</span>
+        <span class="pin" style="left:76%; top:16%;">7</span>
+        <span class="pin" style="left:7%;  top:50%;">8</span>
+        <span class="pin" style="left:30%; top:50%;">9</span>
+        <span class="pin" style="left:53%; top:50%;">10</span>
+        <span class="pin" style="left:76%; top:50%;">11</span>
+    </div>
+
+    <h3>Footswitches</h3>
+    <table>
+        <tr><th style="width:22%">Switch</th><th>What it does</th></tr>
+        <tr>
+            <td class="ctl"><span class="badge">1</span> FREEZE</td>
+            <td>Captures the current sound and sustains it. Every press <b>stacks another
+                layer</b> on top of the ones already playing, up to six.</td>
+        </tr>
+        <tr>
+            <td class="ctl"><span class="badge">2</span> HOLD</td>
+            <td>A <b>momentary</b> freeze: the sound holds only <i>while your foot is
+                down</i> and melts away when you release. Perfect for quick swells that
+                should not leave a layer behind. Release always removes exactly the layer
+                it created — never one of your stacked freezes.</td>
+        </tr>
+        <tr>
+            <td class="ctl"><span class="badge">3</span> CLEAR</td>
+            <td>Each press <b>removes the newest layer</b> — like taking plates off a
+                stack, top plate first. Press repeatedly to unwind back to silence.
+                Layers fade out at the speed set by the SPEED knob.</td>
+        </tr>
+    </table>
+
+    <h3 class="pb" style="margin-top:0">Knobs</h3>
+    <div class="knob-grid">
+        <div class="knob">
+            <h4><span class="badge">4</span> SPEED</h4>
+            <p>How quickly layers <b>swell in and fade out</b>.</p>
+            <ul>
+                <li><b>Low:</b> very slow, bowed swells (~4&nbsp;seconds)</li>
+                <li><b>Default:</b> gentle one-second fades</li>
+                <li><b>High:</b> instant on/off</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">5</span> LAYER</h4>
+            <p>The <b>volume each new layer comes in at</b>.</p>
+            <ul>
+                <li><b>Low:</b> new freezes sit quietly underneath</li>
+                <li><b>High (default):</b> new freezes come in at full strength</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">6</span> GLISS</h4>
+            <p>A one-shot <b>pitch slide</b>: the new layer starts below pitch and glides
+               up into place.</p>
+            <ul>
+                <li><b>Off (default):</b> layers arrive at pitch</li>
+                <li><b>Max:</b> starts a full octave down and rises over ~2&nbsp;seconds</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">7</span> TONE</h4>
+            <p>Softens the <b>high end</b> of the frozen sound.</p>
+            <ul>
+                <li><b>Low:</b> dark and muffled</li>
+                <li><b>Default:</b> slightly warm — tames any frozen hiss</li>
+                <li><b>High:</b> fully open and bright</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">8</span> RATE</h4>
+            <p>The speed of the <b>Movement</b> effect (see DEPTH).</p>
+            <ul>
+                <li><b>Low:</b> a tide-slow breath (one cycle in ~20&nbsp;s)</li>
+                <li><b>High:</b> a fast flutter (~8 times a second)</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">9</span> DEPTH</h4>
+            <p>How much the frozen sound <b>moves</b>: a gentle volume breathing plus a
+               faint pitch shimmer, so long freezes feel alive.</p>
+            <ul>
+                <li><b>Zero (default):</b> perfectly still, statue-frozen</li>
+                <li><b>High:</b> deep, organic breathing</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">10</span> DRY</h4>
+            <p>The volume of your <b>live playing</b> in the output.</p>
+            <ul>
+                <li>Turn down to hear only the frozen sound</li>
+            </ul>
+        </div>
+        <div class="knob">
+            <h4><span class="badge">11</span> EFFECT</h4>
+            <p>The volume of the <b>frozen sound</b> in the output.</p>
+            <ul>
+                <li>Turn up for a bold drone, down for a subtle bed</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ======================================================= page 5: recipes -->
+<section>
+    <h2>Recipes</h2>
+    <p>Knob positions are given like a clock face: fully left is 7 o'clock, the middle
+       is noon, fully right is 5 o'clock.</p>
+
+    <div class="recipe">
+        <h3>Ambient pad bed</h3>
+        <div class="set"><b>SPEED</b> 10 o'clock &middot; <b>LAYER</b> max &middot;
+             <b>GLISS</b> off &middot; <b>TONE</b> noon &middot; <b>DEPTH</b> off &middot;
+             <b>DRY</b> noon &middot; <b>EFFECT</b> noon</div>
+        <p>Strum a soft chord, freeze it, and play melodies on top. The pad swells in
+           gently and stays put, like a keyboard player holding a chord for you all night.</p>
+    </div>
+    <div class="recipe">
+        <h3>Slow-swell cathedral</h3>
+        <div class="set"><b>SPEED</b> minimum &middot; <b>LAYER</b> max &middot;
+             <b>TONE</b> 10 o'clock &middot; <b>DRY</b> 10 o'clock &middot;
+             <b>EFFECT</b> 2 o'clock</div>
+        <p>Every freeze now takes four seconds to bloom. Stack two or three layers a few
+           seconds apart and they rise like an organ filling a stone church. Follow with
+           a big reverb for the full cathedral.</p>
+    </div>
+    <div class="recipe">
+        <h3>Breathing drone</h3>
+        <div class="set"><b>DEPTH</b> 1 o'clock &middot; <b>RATE</b> 9 o'clock &middot;
+             <b>TONE</b> noon &middot; <b>EFFECT</b> 1 o'clock</div>
+        <p>Freeze one low chord and let Movement do the playing: the drone slowly swells
+           and recedes, with a faint shimmer, like something alive under the floorboards.</p>
+    </div>
+    <div class="recipe">
+        <h3>Momentary swells</h3>
+        <div class="set"><b>SPEED</b> noon &middot; <b>DRY</b> max &middot;
+             <b>EFFECT</b> 2 o'clock &middot; use only the <b>HOLD</b> switch</div>
+        <p>Hold the switch down during a sustained note, release as you change chords.
+           You get reverb-like swells exactly where you want them, and nothing lingers
+           after you let go.</p>
+    </div>
+    <div class="recipe">
+        <h3>Rising intro</h3>
+        <div class="set"><b>GLISS</b> max &middot; <b>SPEED</b> 10 o'clock &middot;
+             <b>LAYER</b> max &middot; <b>EFFECT</b> 3 o'clock</div>
+        <p>Freeze the root note of your song: it fades in a whole octave below and
+           glides up into pitch over two seconds — an instant cinematic opening.</p>
+    </div>
+
+    <h2 style="margin-top:16px">Tips</h2>
+    <div class="tips-grid">
+    <div class="tip">
+        <h3>Freeze the ring, not the attack</h3>
+        <p>The capture happens the instant you stomp. Pressing during the pick attack
+           freezes the "thunk"; pressing while the note sings freezes the singing. Let
+           each sound open up for a moment before you freeze it.</p>
+    </div>
+    <div class="tip">
+        <h3>Build chords one note at a time</h3>
+        <p>Freeze a low root. Then a fifth. Then a third, an octave up. Six layers is
+           enough for voicings no single instrument could hold — each new note swelling
+           in at the LAYER volume you chose.</p>
+    </div>
+    <div class="tip">
+        <h3>Stacking many layers thins each one slightly</h3>
+        <p>All layers share one pool of "voices", so a sixth layer makes everything
+           share a little. That is deliberate — it keeps the pedal from overloading the
+           device — and in practice a big stack simply blends into one thick texture.</p>
+    </div>
+    <div class="tip">
+        <h3>Want it dead still? DEPTH to zero.</h3>
+        <p>With DEPTH at zero the freeze is mathematically frozen — not even a flicker.
+           Add DEPTH only when a long drone starts feeling too much like a test tone.</p>
+    </div>
+    </div>
+</section>
+
+<!-- ====================================================== page 6: install -->
+<section>
+    <h2>Installing Boreas</h2>
+    <p>
+        Boreas is free and open source. Download the latest release from<br>
+        <a href="https://github.com/stefdoerr/boreas/releases"><b>github.com/stefdoerr/boreas/releases</b></a>
+        — each release has one file per platform. The examples below use
+        version <code>v0.0.2</code>; replace with the newest you see there.
+    </p>
+
+    <h3>MOD Desktop (Linux)</h3>
+    <ol class="steps">
+        <li>Download <code>boreas-v0.0.2-linux-x86_64.tar.gz</code>.</li>
+        <li>Extract it into MOD Desktop's plugin folder — with a file manager, or in a
+            terminal:
+            <pre>tar -xzf boreas-v0.0.2-linux-x86_64.tar.gz -C "$HOME/Documents/MOD Desktop/lv2/"</pre></li>
+        <li>Restart MOD Desktop. Boreas appears under the brand <b>Stefan</b>.</li>
+    </ol>
+
+    <h3>MOD Dwarf — over USB, no extra tools</h3>
+    <ol class="steps">
+        <li>Connect the Dwarf to your computer with its USB cable, as usual (the web
+            interface should be reachable at <code>http://192.168.51.1</code>).</li>
+        <li>Download <code>boreas-v0.0.2-dwarf-aarch64.tar.gz</code>.</li>
+        <li>In a terminal, from your download folder, send it straight to the unit:
+            <pre>base64 boreas-v0.0.2-dwarf-aarch64.tar.gz | curl -F 'package=@-' http://192.168.51.1/sdk/install</pre></li>
+        <li>Refresh the MOD web interface in your browser — Boreas shows up in the
+            plugin list. If it does not, reboot the Dwarf once.</li>
+    </ol>
+    <div class="note">
+        <b>Tip:</b> most computers can also reach the Dwarf by name, as
+        <code>http://moddwarf.local</code> — every address in this chapter works with
+        that in place of the IP. It is especially handy when the Dwarf is on your
+        Wi&#8209;Fi or network instead of the USB cable, where its IP address varies.
+    </div>
+
+    <h3>MOD Dwarf — alternative, via SSH</h3>
+    <p>If you have SSH access to your Dwarf set up, you can copy the bundle by hand:</p>
+    <pre>tar -xzf boreas-v0.0.2-dwarf-aarch64.tar.gz
+scp -O -r boreas.lv2 root@192.168.51.1:/root/.lv2/</pre>
+    <p>then reboot the unit.</p>
+
+    <h2 class="pb" style="margin-top:0">Questions &amp; answers</h2>
+    <dl class="faq">
+        <div class="qa">
+        <dt>I press FREEZE and nothing happens.</dt>
+        <dd>Three usual causes: the <b>EFFECT</b> knob is at zero (the frozen sound is
+            simply mixed out); the input was <b>silent</b> at the moment you pressed
+            (a freeze of silence is silence — stomp while the sound rings); or you
+            already have <b>six layers</b> frozen (press CLEAR to make room).</dd>
+        </div>
+        <div class="qa">
+        <dt>The frozen sound is duller than my playing.</dt>
+        <dd>That is the <b>TONE</b> knob's default, which softens the high end a touch
+            to keep long freezes from hissing. Turn TONE up for a brighter, airier freeze.</dd>
+        </div>
+        <div class="qa">
+        <dt>My freeze wobbles or pulses.</dt>
+        <dd>That is Movement. Turn <b>DEPTH</b> to zero for a perfectly still freeze —
+            or turn <b>RATE</b> down for a slower, subtler breath.</dd>
+        </div>
+        <div class="qa">
+        <dt>Layers appear/disappear too abruptly (or too slowly).</dt>
+        <dd>That is <b>SPEED</b> — it controls the fade of layers being added <i>and</i>
+            removed. Higher = snappier, lower = slower swells.</dd>
+        </div>
+        <div class="qa">
+        <dt>Is it stereo?</dt>
+        <dd>Boreas is mono in, mono out. For width, place a stereo reverb or delay
+            after it.</dd>
+        </div>
+        <div class="qa">
+        <dt>How long can a freeze last?</dt>
+        <dd>Forever. A frozen layer never decays — it holds until you clear it or
+            remove the pedal.</dd>
+        </div>
+    </dl>
+
+    <h2 style="margin-top:16px">Specifications</h2>
+    <table>
+        <tr><td class="ctl">Audio</td><td>Mono input, mono output</td></tr>
+        <tr><td class="ctl">Layers</td><td>Up to 6 simultaneous frozen layers</td></tr>
+        <tr><td class="ctl">Format</td><td>LV2 plugin</td></tr>
+        <tr><td class="ctl">Platforms</td><td>MOD Desktop (Linux x86_64), MOD Dwarf</td></tr>
+        <tr><td class="ctl">Price &amp; license</td><td>Free, open source (ISC license)</td></tr>
+        <tr><td class="ctl">Source &amp; releases</td>
+            <td><a href="https://github.com/stefdoerr/boreas">github.com/stefdoerr/boreas</a></td></tr>
+    </table>
+
+    <div class="credits">
+        Built with the DISTRHO Plugin Framework. Thanks to MOD Audio for MOD Desktop,
+        the Dwarf, and the plugin ecosystem. Inspired by the Electro-Harmonix Freeze
+        and the family of freeze / infinite-sustain pedals.
+        &nbsp;&middot;&nbsp; Boreas User Manual, July 2026.
+    </div>
+</section>
+
+</body>
+</html>
