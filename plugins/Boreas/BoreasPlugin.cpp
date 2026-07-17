@@ -60,7 +60,7 @@ public:
 protected:
     const char* getLabel()       const override { return DISTRHO_PLUGIN_NAME; }
     const char* getMaker()       const override { return DISTRHO_PLUGIN_BRAND; }
-    const char* getHomePage()    const override { return DISTRHO_PLUGIN_URI; }
+    const char* getHomePage()    const override { return "https://github.com/stefdoerr/boreas"; }
     const char* getLicense()     const override { return "ISC"; }
     uint32_t    getVersion()     const override { return d_version(0, 1, 0); }
     const char* getDescription() const override {

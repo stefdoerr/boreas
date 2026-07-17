@@ -14,6 +14,11 @@
         # Chrome (knobs at default values); re-run that render if the UI changes.
         modgui:screenshot         <modgui/screenshot-boreas.png> ;
         modgui:thumbnail          <modgui/thumbnail-boreas.png> ;
+        # Beginner PDF manual: mod-ui shows a "documentation" button in the
+        # plugin info dialog when this is present. The PDF lives in the repo at
+        # docs/manual/ and is copied into the bundle by the Makefile's modgui
+        # target (regenerate it with `make manual` after editing the HTML).
+        modgui:documentation      <modgui/boreas-manual.pdf> ;
         modgui:brand "Stefan" ;
         modgui:label "Boreas" ;
         modgui:model "boxy" ;

@@ -106,6 +106,10 @@ modgui: ttl
 	@if [ -d $(PLUGIN_DIR)/modgui/knobs ]; then \
 		cp -rf $(PLUGIN_DIR)/modgui/knobs $(BUNDLE)/modgui/; \
 	fi
+	@# Beginner PDF manual -> "documentation" button in the plugin info dialog
+	@# (referenced by modgui.ttl as modgui:documentation). Lives in docs/manual/
+	@# so the binary isn't duplicated in the source modgui dir.
+	cp -f $(MANUAL_PDF) $(BUNDLE)/modgui/
 	sed -e 's|$(PLUGIN_URI_BASE)/$(PLUGIN)|$(PLUGIN_URI)|g' \
 	    -e 's|modgui:label "$(LABEL)"|modgui:label "$(BUNDLE_LABEL)"|' \
 	    $(PLUGIN_DIR)/modgui.ttl > $(BUNDLE)/modgui.ttl
@@ -260,6 +264,14 @@ release: release-build
 	fi
 	@if git rev-parse -q --verify "refs/tags/v$(version)" >/dev/null 2>&1; then \
 		echo "error: tag v$(version) already exists locally."; \
+		exit 1; \
+	fi
+	@# The plugin's own version (getVersion / d_version) is what LV2 hosts and
+	@# MOD's info dialog display — refuse to tag a release that doesn't match it.
+	@v="$(version)"; maj=$${v%%.*}; rest=$${v#*.}; min=$${rest%%.*}; mic=$${rest#*.}; \
+	if ! grep -qE "d_version\($$maj, ?$$min, ?$$mic\)" $(PLUGIN_DIR)/*.cpp; then \
+		echo "error: getVersion() in $(PLUGIN_DIR) does not return d_version($$maj, $$min, $$mic)."; \
+		echo "       Update it to match v$$v (MOD displays it as \"$$min.$$mic-0\")."; \
 		exit 1; \
 	fi
 	@echo "==> Pushing branch (so the tagged commit is reachable on origin)"

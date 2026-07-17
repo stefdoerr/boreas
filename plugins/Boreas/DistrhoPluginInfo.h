@@ -17,6 +17,10 @@
 #define DISTRHO_PLUGIN_UNIQUE_ID dBor
 #endif
 
+// LV2 plugin class -> the "Category" shown in MOD's plugin info/store
+// (mod-ui maps lv2:SpectralPlugin to its "Spectral" category).
+#define DISTRHO_PLUGIN_LV2_CATEGORY   "lv2:SpectralPlugin"
+
 #define DISTRHO_PLUGIN_HAS_UI         0
 #define DISTRHO_PLUGIN_IS_RT_SAFE     1
 #define DISTRHO_PLUGIN_NUM_INPUTS     1
