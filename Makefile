@@ -256,7 +256,12 @@ release-build:
 	@echo "Built release artefacts in $(DIST_DIR)/:"
 	@ls -lh $(DIST_DIR)/$(PLUGIN)-v$(version)-*.tar.gz
 
-release: release-build
+release:
+	@if [ -z "$(version)" ]; then \
+		echo "error: version is required."; \
+		echo "       usage: make release version=x.y.z"; \
+		exit 1; \
+	fi
 	@if [ -n "$$(git status --porcelain)" ]; then \
 		echo "error: working tree is dirty. Commit or stash first."; \
 		git status --short; \
@@ -266,14 +271,17 @@ release: release-build
 		echo "error: tag v$(version) already exists locally."; \
 		exit 1; \
 	fi
-	@# The plugin's own version (getVersion / d_version) is what LV2 hosts and
-	@# MOD's info dialog display — refuse to tag a release that doesn't match it.
-	@v="$(version)"; maj=$${v%%.*}; rest=$${v#*.}; min=$${rest%%.*}; mic=$${rest#*.}; \
-	if ! grep -qE "d_version\($$maj, ?$$min, ?$$mic\)" $(PLUGIN_DIR)/*.cpp; then \
-		echo "error: getVersion() in $(PLUGIN_DIR) does not return d_version($$maj, $$min, $$mic)."; \
-		echo "       Update it to match v$$v (MOD displays it as \"$$min.$$mic-0\")."; \
-		exit 1; \
+	@# The VERSION file is the single source of truth for the plugin's own
+	@# version (injected into getVersion() and the LV2 TTL at build time) —
+	@# bump it to match the tag BEFORE building, so hosts display the
+	@# released version. MOD shows it as "<minor>.<micro>-0".
+	@if [ "$$(cat VERSION)" != "$(version)" ]; then \
+		echo "==> Bumping VERSION $$(cat VERSION) -> $(version)"; \
+		printf '%s\n' "$(version)" > VERSION; \
+		git add VERSION; \
+		git commit -m "Bump version to $(version)"; \
 	fi
+	$(MAKE) release-build version=$(version)
 	@echo "==> Pushing branch (so the tagged commit is reachable on origin)"
 	git push
 	@echo "==> Tagging v$(version)"
