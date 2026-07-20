@@ -25,6 +25,13 @@ CXXFLAGS += -DPLUGIN_VERSION_MAJOR=$(word 1,$(PLUGIN_VERSION_PARTS)) \
             -DPLUGIN_VERSION_MINOR=$(word 2,$(PLUGIN_VERSION_PARTS)) \
             -DPLUGIN_VERSION_MICRO=$(word 3,$(PLUGIN_VERSION_PARTS))
 
+# Extra flags injected by the Patchstorage cross-build (CPU/opt flags matching
+# patchstorage's defconfig). Kept in a separate variable so passing them on the
+# make command line doesn't clobber the version defines above — a command-line
+# CXXFLAGS=... would override the makefile's `CXXFLAGS +=` lines entirely.
+CFLAGS   += $(EXTRA_CFLAGS)
+CXXFLAGS += $(EXTRA_CXXFLAGS)
+
 FILES_DSP = \
 	BoreasPlugin.cpp
 

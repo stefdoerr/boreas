@@ -115,6 +115,70 @@ in via `-e HOST_UID=$$(id -u) -e HOST_GID=$$(id -g)`. Don't remove this.
 
 ---
 
+## Publishing to Patchstorage
+
+Boreas also publishes to patchstorage.com's LV2-plugins platform. This is a
+separate pipeline from the Dwarf cross-build above, driven by
+`patchstorage-build/` (full details in `patchstorage-build/README.md`).
+
+### Three targets, three ABIs
+patchstorage.com's LV2-plugins platform supports exactly three architectures.
+Each is cross-built inside **Patchstorage's own prebuilt toolchain image**
+(`patchstorage/lv2_builder-<platform>:latest`) rather than a toolchain this
+repo maintains, using the same two-phase native-then-cross-compile pattern as
+the Dwarf build:
+
+| Target slug | Arch / ABI | glibc |
+|---|---|---|
+| `linux-amd64` | x86-64, SSE2 | 2.27 |
+| `rpi-aarch64` | AArch64 | 2.27 |
+| `patchbox-os-arm32` | **32-bit armhf + NEON hard-float** | 2.31 |
+
+### Prerequisites
+- Docker
+- Python 3 with `requests`, `click`, and `rdflib`:
+  `pip install requests click rdflib` (a venv works too — point the build at
+  it with `make ... PYTHON=/path/to/venv/bin/python`)
+- `jq`
+- **No `git submodule update --init` needed for this path.** The Patchstorage
+  uploader isn't a submodule here — it's vendored (copied) under
+  `patchstorage-build/uploader/`.
+
+### Screenshot is mandatory
+Same underlying requirement as MOD Desktop's scanner (see "Screenshots —
+REQUIRED, not optional" below): the modgui **screenshot** must be present in
+the bundle, or the Patchstorage uploader refuses to publish it.
+
+### Per-plugin metadata: `patchstorage.json`
+The repo-root `patchstorage.json` carries the fields the uploader can't infer
+from the plugin's `.ttl`:
+```json
+{
+    "source_code_url": "https://github.com/<you>/boreas",
+    "donate_url": null
+}
+```
+Keep `source_code_url` / `donate_url` current if the repo moves or you add a
+donation link — the uploader reads this file verbatim.
+
+### Make targets
+- `make patchstorage-build` — cross-builds all three bundles into
+  `build/patchstorage/<slug>/`.
+- `make patchstorage-prepare` — assembles a disposable uploader tree and
+  generates `patchstorage.json` + artwork + tarballs under
+  `build/ps-upload/dist/` for inspection, without publishing anything.
+- `make patchstorage PS_USER=<username>` — runs both of the above, then
+  pushes. The uploader prompts for your Patchstorage **password
+  interactively**; nothing is stored on disk or in the Makefile.
+
+### Also attached to GitHub releases
+`make release` builds and attaches all three Patchstorage bundles (alongside
+the Dwarf bundle) to the GitHub release, so `make release version=x.y.z`
+produces every downloadable artifact in one pass. The `linux-amd64` asset
+**replaces** the old `linux-x86_64` naming.
+
+---
+
 ## DSP patterns worth knowing
 
 When the user describes an effect, these patterns are commonly needed.
@@ -386,7 +450,11 @@ horizontally in the pedalboard view.
 5. **Then test on Dwarf if applicable:** `make dwarf`. Hard-refresh the
    MOD-UI browser tab. Drag the plugin onto a pedalboard.
 6. **Release when stable:** `make release version=x.y.z`. Refuses on a
-   dirty tree and uploads both bundles to a fresh GitHub release.
+   dirty tree and uploads all bundles (Dwarf + the three Patchstorage
+   targets) to a fresh GitHub release.
+7. **Publish to Patchstorage when ready:** `make patchstorage
+   PS_USER=<username>` (see "Publishing to Patchstorage" above). Separate
+   from the GitHub release — it pushes to patchstorage.com directly.
 
 If something looks broken on the Dwarf but right on desktop, the cause
 is almost always one of:

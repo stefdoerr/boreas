@@ -191,6 +191,17 @@ Then restart MOD Desktop so it rescans plugins; Boreas appears under brand **Ste
 The identity (name/brand/URI) lives in the top-level [`Makefile`](Makefile) and
 [`DistrhoPluginInfo.h`](plugins/Boreas/DistrhoPluginInfo.h).
 
+### Publishing to Patchstorage
+Boreas can also be published to [patchstorage.com](https://patchstorage.com)'s LV2-plugins
+platform (`linux-amd64`, `rpi-aarch64`, and `patchbox-os-arm32` targets):
+
+- `make patchstorage-build` — cross-build all three bundles
+- `make patchstorage-prepare` — assemble + inspect the upload payload before publishing
+- `make patchstorage PS_USER=<username>` — build, prepare, and push (password prompted
+  interactively)
+
+See [`patchstorage-build/README.md`](patchstorage-build/README.md) for prerequisites and details.
+
 ### modgui notes
 The pedal GUI is a custom MOD modgui. A couple of MOD-specific gotchas are documented in
 [`INSTRUCTIONS.md`](INSTRUCTIONS.md): the scanner requires a `screenshot`/`thumbnail` (it

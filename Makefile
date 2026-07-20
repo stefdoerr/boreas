@@ -224,6 +224,71 @@ dwarf: dwarf-build dwarf-deploy
 .PHONY: dwarf dwarf-build dwarf-image dwarf-deploy
 
 # ---------------------------------------------------------------------------
+# Patchstorage build — cross-compile for the three targets patchstorage.com's
+# LV2-plugins platform supports, using Patchstorage's own prebuilt toolchain
+# images (patchstorage/lv2_builder-<platform>:latest). Our build-target.sh runs
+# the same two-phase build as the Dwarf cross-build, but pulls the toolchain
+# from their image instead of building one. Output: build/patchstorage/<slug>/.
+
+PS_TARGETS := linux-amd64 rpi-aarch64 patchbox-os-arm32
+PS_DIR     := build/patchstorage
+PYTHON     ?= python3
+
+patchstorage-build:
+	@set -e; for slug in $(PS_TARGETS); do \
+	  case $$slug in \
+	    linux-amd64) plat=x86_64; tuple=x86_64-mod-linux-gnu; \
+	      flags="-msse -msse2 -mfpmath=sse"; arch="x86-64";; \
+	    rpi-aarch64) plat=raspberrypi4_aarch64; tuple=aarch64-rpi4-linux-gnu; \
+	      flags="-mcpu=cortex-a72"; arch="ARM aarch64";; \
+	    patchbox-os-arm32) plat=raspberrypi3_armv8; tuple=armv8-rpi3-linux-gnueabihf; \
+	      flags="-mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard"; arch="ARM, EABI5";; \
+	    *) echo "unknown slug $$slug"; exit 1;; \
+	  esac; \
+	  echo "==> Building $(PLUGIN) for $$slug ($$plat)"; \
+	  mkdir -p "$(PS_DIR)/$$slug"; \
+	  docker run --rm --user root \
+	    -e HOST_UID=$$(id -u) -e HOST_GID=$$(id -g) \
+	    -e PLUGIN=$(PLUGIN) -e TARGET_SLUG=$$slug \
+	    -e TUPLE=$$tuple -e CPUFLAGS="$$flags" -e EXPECT_ARCH="$$arch" \
+	    -v "$(CURDIR):/src:ro" \
+	    -v "$(CURDIR)/$(PS_DIR)/$$slug:/out" \
+	    patchstorage/lv2_builder-$$plat:latest \
+	    bash /src/patchstorage-build/build-target.sh; \
+	done
+	@echo "==> Patchstorage bundles built under $(PS_DIR)/"
+
+.PHONY: patchstorage-build
+
+# Assemble the uploader working tree and generate patchstorage.json + tarballs +
+# artwork under build/ps-upload/dist/ for inspection. Assumes bundles are already
+# built (run `make patchstorage-build` first). Hits the Patchstorage API.
+patchstorage-prepare:
+	PLUGIN=$(PLUGIN) PYTHON=$(PYTHON) bash patchstorage-build/prepare.sh
+
+.PHONY: patchstorage-prepare
+
+# Full publish: build the three bundles, prepare, and push to patchstorage.com.
+# Provide your Patchstorage username; the uploader prompts for the password
+# (nothing is stored). Idempotent: skips/updates per the uploader's own logic.
+#
+#   make patchstorage PS_USER=<patchstorage-username>
+patchstorage: patchstorage-check-user patchstorage-build patchstorage-prepare
+	cd build/ps-upload && $(PYTHON) uploader.py push all --username "$(PS_USER)"
+
+# Fail fast if PS_USER is unset — BEFORE the expensive build/prepare prerequisites
+# run (a bare `make patchstorage` must not do a full 3-target Docker build only to
+# then complain about a missing username).
+patchstorage-check-user:
+	@if [ -z "$(PS_USER)" ]; then \
+		echo "error: set PS_USER=<patchstorage-username>"; \
+		echo "       usage: make patchstorage PS_USER=yourname"; \
+		exit 1; \
+	fi
+
+.PHONY: patchstorage patchstorage-check-user
+
+# ---------------------------------------------------------------------------
 # release: build desktop + dwarf bundles locally, package them, tag the
 # current commit as v$(version), push, and create a GitHub release with
 # both bundles attached as downloadable assets.
@@ -236,7 +301,9 @@ dwarf: dwarf-build dwarf-deploy
 # `make dwarf-build` is ~10 s.
 
 DIST_DIR := dist
-LINUX_TARBALL := $(PLUGIN)-v$(version)-linux-x86_64.tar.gz
+AMD64_TARBALL := $(PLUGIN)-v$(version)-linux-amd64.tar.gz
+RPI_TARBALL   := $(PLUGIN)-v$(version)-rpi-aarch64.tar.gz
+ARM32_TARBALL := $(PLUGIN)-v$(version)-patchbox-os-arm32.tar.gz
 DWARF_TARBALL := $(PLUGIN)-v$(version)-dwarf-aarch64.tar.gz
 
 release-build:
@@ -245,10 +312,12 @@ release-build:
 		echo "       usage: make release-build version=x.y.z"; \
 		exit 1; \
 	fi
-	@echo "==> Building desktop bundle (Linux x86_64)"
-	$(MAKE) clean all
+	@echo "==> Building Patchstorage bundles (linux-amd64, rpi-aarch64, patchbox-os-arm32)"
+	$(MAKE) patchstorage-build
 	@mkdir -p $(DIST_DIR)
-	tar -C bin -czf $(DIST_DIR)/$(LINUX_TARBALL) $(PLUGIN).lv2
+	tar -C $(PS_DIR)/linux-amd64       -czf $(DIST_DIR)/$(AMD64_TARBALL) $(PLUGIN).lv2
+	tar -C $(PS_DIR)/rpi-aarch64       -czf $(DIST_DIR)/$(RPI_TARBALL)   $(PLUGIN).lv2
+	tar -C $(PS_DIR)/patchbox-os-arm32 -czf $(DIST_DIR)/$(ARM32_TARBALL) $(PLUGIN).lv2
 	@echo "==> Building Dwarf bundle (aarch64)"
 	$(MAKE) dwarf-build
 	tar -C build/dwarf -czf $(DIST_DIR)/$(DWARF_TARBALL) $(PLUGIN).lv2
@@ -287,9 +356,11 @@ release:
 	@echo "==> Tagging v$(version)"
 	git tag -a "v$(version)" -m "Release v$(version)"
 	git push origin "v$(version)"
-	@echo "==> Creating GitHub release v$(version) with both bundles + manual attached"
+	@echo "==> Creating GitHub release v$(version) with all bundles + manual attached"
 	gh release create "v$(version)" \
-		"$(DIST_DIR)/$(LINUX_TARBALL)" \
+		"$(DIST_DIR)/$(AMD64_TARBALL)" \
+		"$(DIST_DIR)/$(RPI_TARBALL)" \
+		"$(DIST_DIR)/$(ARM32_TARBALL)" \
 		"$(DIST_DIR)/$(DWARF_TARBALL)" \
 		"$(MANUAL_PDF)" \
 		--title "v$(version)" \
