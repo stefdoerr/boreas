@@ -35,3 +35,18 @@ toolchain images (`patchstorage/lv2_builder-<platform>:latest`).
 - `make patchstorage-build` — build all three bundles into `build/patchstorage/`
 - `make patchstorage-prepare` — assemble + prepare; inspect `build/ps-upload/dist/`
 - `make patchstorage PS_USER=<username>` — build + prepare + publish
+
+## Desktop formats (VST3 + CLAP)
+
+DPF builds the same source as desktop-DAW plugins too (no MOD required):
+
+- Plain `make` builds `bin/<plugin>.{lv2,vst3,clap}` with your host toolchain.
+- `make desktop-build` builds **portable** VST3 + CLAP using Patchstorage's
+  glibc-2.27 x86_64 toolchain (so they load on a wide range of Linux DAWs, not
+  just your build host) into `build/desktop/`.
+- `make release` packages these and attaches `…-linux-x86_64-vst3.tar.gz` and
+  `…-linux-x86_64-clap.tar.gz` to the GitHub release.
+
+These carry **no custom GUI** — the modgui is MOD-only, so in a DAW the plugin
+shows the host's generic parameter UI. A real cross-format GUI would need a DPF
+`UI` subclass (separate work).

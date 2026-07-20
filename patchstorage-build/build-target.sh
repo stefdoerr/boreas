@@ -46,14 +46,14 @@ PLUGIN_DIR="$(find plugins -mindepth 2 -maxdepth 2 -name Makefile -printf '%h\n'
 [ -n "$PLUGIN_DIR" ] || { echo "build-target.sh: no plugin Makefile under plugins/*/" >&2; exit 1; }
 
 echo "==> [1/3] Native build (.ttl + modgui assets)"
-make -s all
+make -s all PLUGIN_FORMATS=lv2
 STASH=/tmp/${PLUGIN}-bundle-stash
 rm -rf "$STASH"
 cp -rL "bin/${PLUGIN}.lv2" "$STASH"
 
 echo "==> [2/3] Cross-compiling ${PLUGIN}.so for ${TARGET_SLUG} (${TUPLE})"
 make -s -C "$PLUGIN_DIR" clean
-make -s -C "$PLUGIN_DIR" \
+make -s -C "$PLUGIN_DIR" lv2 \
   CC="$BIN_DIR/${TUPLE}-gcc" \
   CXX="$BIN_DIR/${TUPLE}-g++" \
   AR="$BIN_DIR/${TUPLE}-ar" \

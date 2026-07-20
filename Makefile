@@ -67,8 +67,13 @@ all: plugin ttl modgui
 # ---------------------------------------------------------------------------
 # Build the plugin .so
 
+# PLUGIN_FORMATS restricts which DPF formats get built (empty = the inner
+# Makefile's full TARGETS list: lv2 vst3 clap). The Patchstorage/Dwarf
+# cross-builds set PLUGIN_FORMATS=lv2 so they don't waste time building the
+# desktop formats they never ship.
+PLUGIN_FORMATS ?=
 plugin:
-	$(MAKE) -C $(PLUGIN_DIR)
+	$(MAKE) -C $(PLUGIN_DIR) $(PLUGIN_FORMATS)
 
 # ---------------------------------------------------------------------------
 # Generate manifest.ttl and <plugin>.ttl via DPF's TTL generator.
@@ -289,6 +294,28 @@ patchstorage-check-user:
 .PHONY: patchstorage patchstorage-check-user
 
 # ---------------------------------------------------------------------------
+# desktop-build — build the desktop plugin formats (VST3 + CLAP) with
+# Patchstorage's portable x86_64 toolchain (glibc 2.27), so the binaries load on
+# a wide range of Linux DAWs regardless of this machine's glibc. Output:
+# build/desktop/<plugin>.{vst3,clap}. (Plain `make` also builds these two, but
+# with your host toolchain; this target is the portable one used for releases.)
+DESKTOP_DIR := build/desktop
+
+desktop-build:
+	@mkdir -p "$(DESKTOP_DIR)"
+	docker run --rm --user root \
+	  -e HOST_UID=$$(id -u) -e HOST_GID=$$(id -g) \
+	  -e PLUGIN=$(PLUGIN) -e TUPLE=x86_64-mod-linux-gnu \
+	  -e CPUFLAGS="-msse -msse2 -mfpmath=sse" \
+	  -v "$(CURDIR):/src:ro" \
+	  -v "$(CURDIR)/$(DESKTOP_DIR):/out" \
+	  patchstorage/lv2_builder-x86_64:latest \
+	  bash /src/patchstorage-build/build-desktop.sh
+	@echo "==> Desktop plugins (VST3 + CLAP) built under $(DESKTOP_DIR)/"
+
+.PHONY: desktop-build
+
+# ---------------------------------------------------------------------------
 # release: build desktop + dwarf bundles locally, package them, tag the
 # current commit as v$(version), push, and create a GitHub release with
 # both bundles attached as downloadable assets.
@@ -305,6 +332,8 @@ AMD64_TARBALL := $(PLUGIN)-v$(version)-linux-amd64.tar.gz
 RPI_TARBALL   := $(PLUGIN)-v$(version)-rpi-aarch64.tar.gz
 ARM32_TARBALL := $(PLUGIN)-v$(version)-patchbox-os-arm32.tar.gz
 DWARF_TARBALL := $(PLUGIN)-v$(version)-dwarf-aarch64.tar.gz
+VST3_TARBALL  := $(PLUGIN)-v$(version)-linux-x86_64-vst3.tar.gz
+CLAP_TARBALL  := $(PLUGIN)-v$(version)-linux-x86_64-clap.tar.gz
 
 release-build:
 	@if [ -z "$(version)" ]; then \
@@ -321,6 +350,10 @@ release-build:
 	@echo "==> Building Dwarf bundle (aarch64)"
 	$(MAKE) dwarf-build
 	tar -C build/dwarf -czf $(DIST_DIR)/$(DWARF_TARBALL) $(PLUGIN).lv2
+	@echo "==> Building desktop plugin formats (VST3 + CLAP, portable x86_64)"
+	$(MAKE) desktop-build
+	tar -C $(DESKTOP_DIR) -czf $(DIST_DIR)/$(VST3_TARBALL) $(PLUGIN).vst3
+	tar -C $(DESKTOP_DIR) -czf $(DIST_DIR)/$(CLAP_TARBALL) $(PLUGIN).clap
 	@echo
 	@echo "Built release artefacts in $(DIST_DIR)/:"
 	@ls -lh $(DIST_DIR)/$(PLUGIN)-v$(version)-*.tar.gz
@@ -362,6 +395,8 @@ release:
 		"$(DIST_DIR)/$(RPI_TARBALL)" \
 		"$(DIST_DIR)/$(ARM32_TARBALL)" \
 		"$(DIST_DIR)/$(DWARF_TARBALL)" \
+		"$(DIST_DIR)/$(VST3_TARBALL)" \
+		"$(DIST_DIR)/$(CLAP_TARBALL)" \
 		"$(MANUAL_PDF)" \
 		--title "v$(version)" \
 		--generate-notes

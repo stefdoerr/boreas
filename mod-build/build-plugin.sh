@@ -73,7 +73,7 @@ if [ -z "$PLUGIN_DIR" ]; then
 fi
 
 echo "==> [1/3] Native build (for .ttl metadata + modgui assets)"
-make -s all ${MAKE_BETA}
+make -s all ${MAKE_BETA} PLUGIN_FORMATS=lv2
 # Stash the populated bundle (.ttl + modgui assets). DPF's clean between
 # the native and cross builds wipes bin/, so we have to set this aside.
 BUNDLE_STASH=/tmp/${BUNDLE}-bundle-stash
@@ -82,7 +82,7 @@ cp -rL "bin/${BUNDLE}.lv2" "$BUNDLE_STASH"
 
 echo "==> [2/3] Cross-compiling ${BUNDLE}.so for aarch64"
 make -s -C "$PLUGIN_DIR" clean ${MAKE_BETA}
-make -s -C "$PLUGIN_DIR" ${MAKE_BETA} \
+make -s -C "$PLUGIN_DIR" lv2 ${MAKE_BETA} \
     CC="$TOOLCHAIN_BIN/${TOOL_PREFIX}-gcc" \
     CXX="$TOOLCHAIN_BIN/${TOOL_PREFIX}-g++" \
     AR="$TOOLCHAIN_BIN/${TOOL_PREFIX}-ar" \
