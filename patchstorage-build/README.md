@@ -18,7 +18,17 @@ toolchain images (`patchstorage/lv2_builder-<platform>:latest`).
 
 ## Prerequisites
 - Docker
-- Python 3 with `pip install requests click rdflib`, and `jq`
+- `jq`
+- Python 3 with `requests`, `click`, `rdflib`. A dedicated env is cleanest — it
+  avoids polluting your base Python and survives `make clean` (which wipes
+  `build/`):
+  ```bash
+  conda create -y -n patchstorage-uploader python=3.12 pip
+  conda run -n patchstorage-uploader pip install requests click rdflib
+  ```
+  Then `conda activate patchstorage-uploader` before `make`, or pass
+  `PYTHON="$(conda run -n patchstorage-uploader which python)"`. (A plain
+  `pip install requests click rdflib`, or a venv, works too.)
 - A modgui **screenshot** in the bundle (required to publish)
 
 ## Usage

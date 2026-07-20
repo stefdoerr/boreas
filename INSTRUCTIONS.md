@@ -136,9 +136,17 @@ the Dwarf build:
 
 ### Prerequisites
 - Docker
-- Python 3 with `requests`, `click`, and `rdflib`:
-  `pip install requests click rdflib` (a venv works too — point the build at
-  it with `make ... PYTHON=/path/to/venv/bin/python`)
+- Python 3 with `requests`, `click`, and `rdflib`. A dedicated env is cleanest
+  — it avoids polluting your base Python and survives `make clean` (which wipes
+  `build/`):
+  ```bash
+  conda create -y -n patchstorage-uploader python=3.12 pip
+  conda run -n patchstorage-uploader pip install requests click rdflib
+  ```
+  Then either `conda activate patchstorage-uploader` before running `make`, or
+  point the build at it explicitly:
+  `make ... PYTHON="$(conda run -n patchstorage-uploader which python)"`.
+  (A plain `pip install requests click rdflib`, or a venv, works too.)
 - `jq`
 - **No `git submodule update --init` needed for this path.** The Patchstorage
   uploader isn't a submodule here — it's vendored (copied) under
