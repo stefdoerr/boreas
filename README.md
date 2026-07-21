@@ -2,15 +2,36 @@
 
 ![Boreas — freeze / infinite-sustain pedal](plugins/Boreas/modgui/screenshot-boreas.png)
 
-**Freeze / infinite-sustain pedal for [MOD Desktop](https://mod.audio/desktop/) and
-[MOD Dwarf](https://mod.audio/dwarf/).** Capture a moment of sound and hold it as a
-smooth, endless drone — stack layers, slide them in by pitch, shape the tone, and add
-organic movement. Built with the [DISTRHO Plugin Framework (DPF)](https://github.com/DISTRHO/DPF)
-as a mono-in / mono-out LV2 plugin.
+**Freeze / infinite-sustain pedal for [MOD Desktop](https://mod.audio/desktop/),
+[MOD Dwarf](https://mod.audio/dwarf/), and any VST3 / CLAP / LV2 host.** Capture a
+moment of sound and hold it as a smooth, endless drone — stack layers, slide them in
+by pitch, shape the tone, and add organic movement. Built with the
+[DISTRHO Plugin Framework (DPF)](https://github.com/DISTRHO/DPF) as a mono-in /
+mono-out plugin in **LV2, VST3, and CLAP** formats.
 
 Boreas freezes by **spectral resynthesis**, not looping: it analyses the captured sound
 into a bank of steady sine oscillators and plays *those*, so the sustain is dead steady
 with no loop seam, no choppiness, and no buzz.
+
+---
+
+## Platforms & formats
+
+One DSP, built once and shipped everywhere — grab a prebuilt build from the
+[**Releases page**](../../releases), or build from source (below):
+
+| Where it runs | Format | Get it |
+|---|---|---|
+| **MOD Desktop** (Linux x86-64) | LV2 + modgui | `…-linux-amd64.tar.gz`, or `./install.sh` |
+| **MOD Dwarf** | LV2 (aarch64) | `…-dwarf-aarch64.tar.gz`, or `make dwarf` |
+| **Raspberry Pi 4** (64-bit) | LV2 | `…-rpi-aarch64.tar.gz` |
+| **Patchbox OS** (32-bit Pi) | LV2 | `…-patchbox-os-arm32.tar.gz` |
+| **Desktop DAWs** — Linux, Windows, macOS | **VST3 + CLAP** | per-OS bundles (macOS: unsigned `.pkg`) |
+| **Any LV2 host** (Ardour, Carla, Reaper, …) | LV2 | the Linux LV2 bundle above |
+
+Also published on [**Patchstorage**](https://patchstorage.com/). The desktop VST3/CLAP
+binaries for every OS are built by GitHub Actions and attached to each release; the MOD
+Dwarf and Patchstorage bundles are built locally (they need their own toolchains).
 
 ---
 
@@ -172,7 +193,7 @@ make -C tests test     # build and run all DSP unit tests
 ```bash
 git clone --recurse-submodules <repo-url> boreas
 cd boreas
-make                               # build bin/boreas.lv2 (Linux x86_64)
+make                               # build bin/boreas.{lv2,vst3,clap} (host toolchain)
 MOD_DESKTOP_PLUGINS=/path/to/mod-desktop/plugins ./install.sh
 ```
 
@@ -180,7 +201,7 @@ Then restart MOD Desktop so it rescans plugins; Boreas appears under brand **Ste
 
 | Command | What it does |
 |---|---|
-| `make` | Build `bin/boreas.lv2` (Linux x86_64) |
+| `make` | Build `bin/boreas.{lv2,vst3,clap}` with the host toolchain |
 | `make beta` | Build the side-by-side `boreas-beta.lv2` variant (distinct URI/id) |
 | `./install.sh` | Install into MOD Desktop's user-plugin dir |
 | `make -C tests test` | Run the DSP unit tests |
