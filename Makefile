@@ -60,9 +60,32 @@ PLUGIN_URI   := $(PLUGIN_URI_BASE)/$(PLUGIN)
 endif
 BUNDLE := bin/$(BUNDLE_NAME).lv2
 
-.PHONY: all plugin ttl modgui clean distclean
+.PHONY: all plugin ttl modgui features clean distclean
 
+# Desktop CI (dpf-makefile-action) sets DESKTOP_ONLY=1 (via the workflow's
+# `extraargs`) to build ONLY the self-describing desktop formats: VST3 + CLAP.
+# It deliberately skips:
+#   - lv2       — a desktop LV2 would need the top-level `ttl` step (the inner
+#                 DPF build emits only the .so, not manifest.ttl), and the
+#                 desktop-Linux LV2 is already shipped as the Patchstorage
+#                 linux-amd64 release asset, so it'd be redundant here.
+#   - ttl/modgui — MOD-specific and irrelevant to a desktop VST3/CLAP release;
+#                 `ttl` also uses GNU-only `sed -i` that breaks on the macOS
+#                 runner's BSD sed.
+# Local `make` (DESKTOP_ONLY unset) still does the full MOD build.
+ifeq ($(DESKTOP_ONLY),1)
+PLUGIN_FORMATS := vst3 clap
+all: plugin
+else
 all: plugin ttl modgui
+endif
+
+# dpf-makefile-action runs `make features` (to print DPF's detected build
+# features) before building. Our top-level Makefile isn't a DPF Makefile, so
+# delegate to the inner plugin Makefile — it includes dpf/Makefile.base.mk,
+# where the real `features` target lives.
+features:
+	@$(MAKE) -C $(PLUGIN_DIR) features
 
 # ---------------------------------------------------------------------------
 # Build the plugin .so
