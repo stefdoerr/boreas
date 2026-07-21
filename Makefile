@@ -294,31 +294,11 @@ patchstorage-check-user:
 .PHONY: patchstorage patchstorage-check-user
 
 # ---------------------------------------------------------------------------
-# desktop-build — build the desktop plugin formats (VST3 + CLAP) with
-# Patchstorage's portable x86_64 toolchain (glibc 2.27), so the binaries load on
-# a wide range of Linux DAWs regardless of this machine's glibc. Output:
-# build/desktop/<plugin>.{vst3,clap}. (Plain `make` also builds these two, but
-# with your host toolchain; this target is the portable one used for releases.)
-DESKTOP_DIR := build/desktop
-
-desktop-build:
-	@mkdir -p "$(DESKTOP_DIR)"
-	docker run --rm --user root \
-	  -e HOST_UID=$$(id -u) -e HOST_GID=$$(id -g) \
-	  -e PLUGIN=$(PLUGIN) -e TUPLE=x86_64-mod-linux-gnu \
-	  -e CPUFLAGS="-msse -msse2 -mfpmath=sse" \
-	  -v "$(CURDIR):/src:ro" \
-	  -v "$(CURDIR)/$(DESKTOP_DIR):/out" \
-	  patchstorage/lv2_builder-x86_64:latest \
-	  bash /src/patchstorage-build/build-desktop.sh
-	@echo "==> Desktop plugins (VST3 + CLAP) built under $(DESKTOP_DIR)/"
-
-.PHONY: desktop-build
-
-# ---------------------------------------------------------------------------
-# release: build desktop + dwarf bundles locally, package them, tag the
-# current commit as v$(version), push, and create a GitHub release with
-# both bundles attached as downloadable assets.
+# release: build the MOD/Patchstorage LV2 bundles + Dwarf locally, package them,
+# tag the current commit as v$(version), push, and create a GitHub release.
+# The desktop VST3/CLAP (linux-x86_64, win64, macos-universal) are built by
+# GitHub Actions (.github/workflows/desktop-release.yml) on the pushed tag and
+# appended to the same release.
 #
 #   make release version=0.0.1
 #
@@ -332,8 +312,6 @@ AMD64_TARBALL := $(PLUGIN)-v$(version)-linux-amd64.tar.gz
 RPI_TARBALL   := $(PLUGIN)-v$(version)-rpi-aarch64.tar.gz
 ARM32_TARBALL := $(PLUGIN)-v$(version)-patchbox-os-arm32.tar.gz
 DWARF_TARBALL := $(PLUGIN)-v$(version)-dwarf-aarch64.tar.gz
-VST3_TARBALL  := $(PLUGIN)-v$(version)-linux-x86_64-vst3.tar.gz
-CLAP_TARBALL  := $(PLUGIN)-v$(version)-linux-x86_64-clap.tar.gz
 
 release-build:
 	@if [ -z "$(version)" ]; then \
@@ -350,10 +328,6 @@ release-build:
 	@echo "==> Building Dwarf bundle (aarch64)"
 	$(MAKE) dwarf-build
 	tar -C build/dwarf -czf $(DIST_DIR)/$(DWARF_TARBALL) $(PLUGIN).lv2
-	@echo "==> Building desktop plugin formats (VST3 + CLAP, portable x86_64)"
-	$(MAKE) desktop-build
-	tar -C $(DESKTOP_DIR) -czf $(DIST_DIR)/$(VST3_TARBALL) $(PLUGIN).vst3
-	tar -C $(DESKTOP_DIR) -czf $(DIST_DIR)/$(CLAP_TARBALL) $(PLUGIN).clap
 	@echo
 	@echo "Built release artefacts in $(DIST_DIR)/:"
 	@ls -lh $(DIST_DIR)/$(PLUGIN)-v$(version)-*.tar.gz
@@ -389,14 +363,12 @@ release:
 	@echo "==> Tagging v$(version)"
 	git tag -a "v$(version)" -m "Release v$(version)"
 	git push origin "v$(version)"
-	@echo "==> Creating GitHub release v$(version) with all bundles + manual attached"
+	@echo "==> Creating GitHub release v$(version) (MOD/Patchstorage LV2 + Dwarf + manual; desktop VST3/CLAP added by CI)"
 	gh release create "v$(version)" \
 		"$(DIST_DIR)/$(AMD64_TARBALL)" \
 		"$(DIST_DIR)/$(RPI_TARBALL)" \
 		"$(DIST_DIR)/$(ARM32_TARBALL)" \
 		"$(DIST_DIR)/$(DWARF_TARBALL)" \
-		"$(DIST_DIR)/$(VST3_TARBALL)" \
-		"$(DIST_DIR)/$(CLAP_TARBALL)" \
 		"$(MANUAL_PDF)" \
 		--title "v$(version)" \
 		--generate-notes

@@ -180,10 +180,37 @@ donation link — the uploader reads this file verbatim.
   interactively**; nothing is stored on disk or in the Makefile.
 
 ### Also attached to GitHub releases
-`make release` builds and attaches all three Patchstorage bundles (alongside
-the Dwarf bundle) to the GitHub release, so `make release version=x.y.z`
-produces every downloadable artifact in one pass. The `linux-amd64` asset
-**replaces** the old `linux-x86_64` naming.
+`make release` builds and attaches the three Patchstorage LV2 bundles + the
+Dwarf bundle + the manual to the GitHub release. Desktop VST3/CLAP are added by
+CI (see below), so `make release version=x.y.z` plus the tag it pushes yields
+every downloadable artifact. The `linux-amd64` asset **replaces** the old
+`linux-x86_64` naming.
+
+## Desktop builds (VST3 / CLAP) — built by CI, not locally
+
+Desktop plugin binaries are built by **GitHub Actions**
+(`.github/workflows/desktop-release.yml`), not by `make release`. On a pushed
+`v*` tag, `distrho/dpf-makefile-action` builds VST3 + CLAP (+ LV2) for:
+
+- **linux-x86_64** — inside an `ubuntu:20.04` container (glibc 2.31 floor)
+- **win64** — cross-compiled from Linux (MinGW); no Windows machine needed
+- **macos-universal** — arm64 + x86_64, **unsigned** (users right-click → Open
+  past Gatekeeper)
+
+and appends them to the same release `make release` created.
+
+**Why CI, not local:** macOS can't be built on Linux at all, and these use the
+runners' native toolchains — no custom Docker. MOD Dwarf and Patchstorage, by
+contrast, need their specific toolchains, so they stay local (`make dwarf` /
+`make patchstorage`).
+
+**Local desktop testing is unchanged** — you don't need CI to try a desktop
+build while developing:
+- `make` builds `bin/<plugin>.{lv2,vst3,clap}` with your host toolchain → copy
+  the `.vst3`/`.clap` into `~/.vst3` / `~/.clap` and load in any DAW.
+- `make install` builds + installs the LV2 + modgui into MOD Desktop.
+
+CI is only the release conveyor for the portable / cross-platform binaries.
 
 ---
 

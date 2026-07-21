@@ -1,0 +1,41 @@
+# Desktop plugin builds (VST3 + CLAP, + LV2) for Linux / Windows / macOS, via
+# DISTRHO's official dpf-makefile-action. Triggered on a pushed tag (v*): the
+# built archives are attached to that tag's GitHub release.
+#
+# MOD Dwarf and Patchstorage builds are NOT here — they need their own Docker
+# toolchains and stay in `make dwarf` / `make patchstorage` locally. `make
+# release` creates the release with those local artifacts; this workflow then
+# appends the desktop builds to the same release.
+#
+# macOS is shipped UNSIGNED (users right-click -> Open past Gatekeeper).
+name: desktop-release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}   # manual runs (builds only; nothing to attach without a tag)
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux desktop — build inside an ubuntu:20.04 container for a glibc-2.31
+          # floor (runs on Ubuntu 20.04+/Debian 11+), matching DISTRHO's own CI.
+          - { target: linux-x86_64,    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          # Windows — cross-compiled from Linux (MinGW); no Windows runner needed.
+          - { target: win64,           os: ubuntu-24.04 }
+          # macOS — universal (arm64 + x86_64) on an Apple-Silicon runner.
+          - { target: macos-universal, os: macos-14 }
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive   # dpf is a submodule — required to build
+      - uses: distrho/dpf-makefile-action@v1
+        with:
+          target: ${{ matrix.target }}
+          release: ${{ startsWith(github.ref, 'refs/tags/') }}
