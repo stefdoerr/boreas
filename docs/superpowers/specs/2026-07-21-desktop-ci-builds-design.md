@@ -184,3 +184,49 @@ action / `softprops/action-gh-release` upsert semantics), and/or a short
 ## Open questions
 
 None blocking.
+
+## Implementation notes (as-built — boreas, 2026-07-21)
+
+Verified on boreas (CI run `29835053785`, all three platforms green). Two deltas
+from the design above emerged during implementation:
+
+1. **Desktop CI builds VST3 + CLAP only — LV2 dropped.** The inner DPF build
+   emits only the plugin `.so`; a valid desktop LV2 bundle needs the top-level
+   `ttl` step (`generate-ttl.sh` + a MOD-specific `sed -i` patch), which is
+   MOD-oriented and uses GNU-only `sed -i` that breaks on the macOS runner. The
+   desktop-Linux LV2 is already shipped as the Patchstorage `linux-amd64` release
+   asset, so a CI desktop LV2 would be redundant. This matches the original
+   intent ("just the VST3 and CLAP builds on releases").
+
+2. **The action drives the build via `make features` then `make`.** Our
+   top-level Makefile isn't a DPF Makefile, so:
+   - Added a top-level `features:` target that delegates to the inner plugin
+     Makefile (which includes `dpf/Makefile.base.mk`, where `features` lives).
+   - Added a `DESKTOP_ONLY=1` switch (passed through the action's `extraargs`):
+     it sets `PLUGIN_FORMATS := vst3 clap` and makes `all: plugin` (skipping the
+     MOD-specific `ttl`/`modgui`). Local `make` (DESKTOP_ONLY unset) is unchanged.
+   The workflow stays identical across repos (`extraargs: DESKTOP_ONLY=1`); the
+   plugin-dir specificity lives in each repo's top-level Makefile (`PLUGIN_DIR`).
+
+3. **`ubuntu:20.04` container needs git installed before checkout.** The base
+   image has no git, so `actions/checkout` fell back to a git-less REST download
+   that can't fetch the `dpf` submodule. A guarded pre-checkout step
+   (`if: matrix.container != ''`) installs `git ca-certificates`.
+
+4. **pawpaw confirmed unnecessary.** The win64 cross-build is self-contained —
+   `boreas.clap` imports only system DLLs (KERNEL32/msvcrt/SHELL32); DPF
+   statically links the MinGW runtime. No `pawpaw` input needed.
+
+5. **macOS artifact is a `.pkg` installer** (DPF's `package-osx-installer`),
+   containing the VST3 + CLAP; Linux/Windows ship the bare bundles.
+
+### Propagation status
+
+- **boreas**: done + verified (commit `9360430`).
+- **mod-plugin-template**: pending — has no workflow yet; add `desktop-release.yml`
+  + the `features`/`DESKTOP_ONLY` Makefile hooks + trim + docs.
+- **sitar**: pending — **already has an older `release.yml`** that builds a
+  linux-x86_64 LV2 *in CI* via plain `make` and creates the release itself. Under
+  this design that LV2 is produced *locally* by `make release` (Patchstorage
+  `linux-amd64`), so the old workflow should be **replaced** by
+  `desktop-release.yml`. Confirm before replacing (outward-facing release change).

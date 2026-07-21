@@ -190,14 +190,17 @@ every downloadable artifact. The `linux-amd64` asset **replaces** the old
 
 Desktop plugin binaries are built by **GitHub Actions**
 (`.github/workflows/desktop-release.yml`), not by `make release`. On a pushed
-`v*` tag, `distrho/dpf-makefile-action` builds VST3 + CLAP (+ LV2) for:
+`v*` tag, `distrho/dpf-makefile-action` builds VST3 + CLAP for:
 
 - **linux-x86_64** — inside an `ubuntu:20.04` container (glibc 2.31 floor)
 - **win64** — cross-compiled from Linux (MinGW); no Windows machine needed
 - **macos-universal** — arm64 + x86_64, **unsigned** (users right-click → Open
-  past Gatekeeper)
+  past Gatekeeper); delivered as a `.pkg` installer
 
-and appends them to the same release `make release` created.
+and appends them to the same release `make release` created. Desktop **LV2 is
+not built in CI** — the desktop-Linux LV2 already ships as the Patchstorage
+`linux-amd64` asset, and the desktop formats worth shipping cross-platform are
+VST3 + CLAP.
 
 **Why CI, not local:** macOS can't be built on Linux at all, and these use the
 runners' native toolchains — no custom Docker. MOD Dwarf and Patchstorage, by
