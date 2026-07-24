@@ -16,6 +16,13 @@ on:
       - 'v*'
   workflow_dispatch: {}   # manual runs (builds only; nothing to attach without a tag)
 
+# The release job attaches the built VST3/CLAP to the GitHub release via
+# softprops/action-gh-release, which needs write access to repo contents. The
+# repo's default GITHUB_TOKEN is read-only, so grant it explicitly here —
+# scoped to this workflow (least privilege), not the whole repo.
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
