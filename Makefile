@@ -199,8 +199,14 @@ install-beta:
 # mod-plugin-builder cross-toolchain (aarch64, glibc 2.27, gcc 9.4.0 —
 # matching Dwarf firmware). First `make dwarf-image` is slow (~30-60 min,
 # one-time per machine). After that, `make dwarf-build` is ~10 s.
+#
+# The image holds NO plugin source (the tree is mounted at build time), so
+# it is plugin-INDEPENDENT: one shared image (moddwarf-cross) is reused by
+# every plugin built from this template. The shared name is deliberate — do
+# NOT derive it from $(PLUGIN), or each plugin rebuilds the ~6 GB toolchain.
+# (Override CROSS_IMAGE=... only if you really want a separate image.)
 
-CROSS_IMAGE  ?= $(PLUGIN)-cross
+CROSS_IMAGE  ?= moddwarf-cross
 DWARF_HOST   ?= 192.168.51.1
 DWARF_USER   ?= root
 DWARF_LV2DIR ?= /root/.lv2

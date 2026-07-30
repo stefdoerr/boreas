@@ -25,6 +25,11 @@ make dwarf-image          # ~30-60 min, cached forever after
 Most of the time is MPB's bootstrap compiling the cross-toolchain via
 crosstool-ng. After this completes, every cross-build is ~10s.
 
+The image contains no plugin source — the tree is mounted at build time —
+so it is shared by every plugin built from this template. That's why the
+tag is the plugin-independent `moddwarf-cross` and not `boreas-cross`:
+one ~6 GB toolchain on the machine, reused everywhere.
+
 ## Daily workflow
 
 ```bash
@@ -37,7 +42,7 @@ Override defaults on the command line:
 
 | Variable        | Default          | Purpose |
 |-----------------|------------------|---------|
-| `CROSS_IMAGE`   | `<plugin>-cross` | Docker image tag. |
+| `CROSS_IMAGE`   | `moddwarf-cross` | Docker image tag (shared across plugins). |
 | `DWARF_HOST`    | `192.168.51.1`   | Hostname/IP of the connected Dwarf. |
 | `DWARF_USER`    | `root`           | SSH user on the Dwarf. |
 | `DWARF_LV2DIR`  | `/root/.lv2`     | Plugin install dir on the Dwarf. |
