@@ -342,10 +342,21 @@ RPI_TARBALL   := $(PLUGIN)-v$(version)-rpi-aarch64.tar.gz
 ARM32_TARBALL := $(PLUGIN)-v$(version)-patchbox-os-arm32.tar.gz
 DWARF_TARBALL := $(PLUGIN)-v$(version)-dwarf-aarch64.tar.gz
 
+# Build + package the bundles for a release. Doesn't tag or push; useful
+# on its own for testing what the assets look like before publishing.
+# Requires the VERSION file to already say $(version) so the tarball name
+# can't disagree with the version baked into the binaries — `make release`
+# bumps the file automatically.
 release-build:
 	@if [ -z "$(version)" ]; then \
 		echo "error: version is required."; \
 		echo "       usage: make release-build version=x.y.z"; \
+		exit 1; \
+	fi
+	@if [ "$$(cat VERSION)" != "$(version)" ]; then \
+		echo "error: VERSION file says $$(cat VERSION), but version=$(version)."; \
+		echo "       'make release version=$(version)' bumps it automatically,"; \
+		echo "       or update the VERSION file first."; \
 		exit 1; \
 	fi
 	@echo "==> Building Patchstorage bundles (linux-amd64, rpi-aarch64, patchbox-os-arm32)"
